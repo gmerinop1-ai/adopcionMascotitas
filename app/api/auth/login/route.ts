@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { validateLoginForm } from "@/lib/validations"
+import { verifyPassword } from "@/lib/auth"
+import { getUserByEmail } from "@/lib/db"
+import { supabase } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
@@ -13,58 +16,75 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Datos inválidos", errors: validationErrors }, { status: 400 })
     }
 
-    // TODO: Get user from database
-    // const users = await query<Usuario>(
-    //   "SELECT * FROM usuarios WHERE correo = $1",
-    //   [correo]
-    // )
+    // Get user from database
+    const user = await getUserByEmail(correo)
 
-    // if (users.length === 0) {
-    //   return NextResponse.json(
-    //     { error: "Credenciales incorrectas" },
-    //     { status: 401 }
-    //   )
-    // }
+    if (!user) {
+      return NextResponse.json(
+        { error: "Credenciales incorrectas" },
+        { status: 401 }
+      )
+    }
 
-    // const user = users[0]
+    // Check if account is active
+    if (user.estado !== "activo") {
+      return NextResponse.json(
+        { error: "Cuenta inactiva. Contacta al administrador." },
+        { status: 403 }
+      )
+    }
 
-    // // Check if account is active
-    // if (user.estado !== "activo") {
-    //   return NextResponse.json(
-    //     { error: "Cuenta inactiva. Contacta al administrador." },
-    //     { status: 403 }
-    //   )
-    // }
+    // Verify password
+    const isValidPassword = await verifyPassword(password, user.password)
 
-    // // Verify password
-    // const isValidPassword = await verifyPassword(password, user.password_hash)
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: "Credenciales incorrectas" },
+        { status: 401 }
+      )
+    }
 
-    // if (!isValidPassword) {
-    //   return NextResponse.json(
-    //     { error: "Credenciales incorrectas" },
-    //     { status: 401 }
-    //   )
-    // }
+    // Get role information
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('nombre')
+      .eq('id', user.rol_id)
+      .single()
 
-    // For now, return mock success (will be implemented when database is connected)
-    // Mock user for testing
-    const mockUser = {
-      id: 1,
-      nombre_completo: "Usuario Demo",
-      correo: correo,
-      rol: correo.includes("admin") ? "administrador" : "usuario",
+    // Get adoptante information if user is adoptante
+    let userData: any = {
+      usuario_id: user.usuario_id,
+      correo: user.correo,
+      rol: roleData?.nombre || 'adoptante'
+    }
+
+    if (roleData?.nombre === 'adoptante') {
+      const { data: adoptanteData } = await supabase
+        .from('adoptante')
+        .select('nombres, apellidos, nro_dni')
+        .eq('usuario_id', user.usuario_id)
+        .single()
+
+      if (adoptanteData) {
+        userData = {
+          ...userData,
+          nombres: adoptanteData.nombres,
+          apellidos: adoptanteData.apellidos,
+          nro_dni: adoptanteData.nro_dni
+        }
+      }
     }
 
     return NextResponse.json(
       {
         success: true,
         message: "Inicio de sesión exitoso",
-        user: mockUser,
+        user: userData,
       },
-      { status: 200 },
+      { status: 200 }
     )
   } catch (error) {
-    console.error("[v0] Login error:", error)
+    console.error("[LOGIN] Login error:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

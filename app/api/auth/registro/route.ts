@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server"
 import { validateRegistrationForm } from "@/lib/validations"
 import { hashPassword } from "@/lib/auth"
+import { 
+  insertUsuario, 
+  insertAdoptante, 
+  getUserByEmail, 
+  getRoleByName, 
+  getAdoptanteByDNI 
+} from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { nombre_completo, correo, password } = body
+    const { nombres, apellidos, nro_dni, correo, password } = body
 
     // Validate input
     const validationErrors = validateRegistrationForm({
-      nombre_completo,
+      nombres,
+      apellidos,
+      nro_dni,
       correo,
       password,
       confirmar_password: password, // For API, we assume frontend validated this
@@ -19,34 +28,63 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Datos inválidos", errors: validationErrors }, { status: 400 })
     }
 
-    // TODO: Check if email already exists in database
-    // const existingUser = await query("SELECT id FROM usuarios WHERE correo = $1", [correo])
-    // if (existingUser.length > 0) {
-    //   return NextResponse.json(
-    //     { error: "El correo ya está registrado", errors: [{ field: "correo", message: "Este correo ya está en uso" }] },
-    //     { status: 400 }
-    //   )
-    // }
+    // Check if email already exists
+    const existingUser = await getUserByEmail(correo)
+    if (existingUser) {
+      return NextResponse.json(
+        { 
+          error: "El correo ya está registrado", 
+          errors: [{ field: "correo", message: "Este correo ya está en uso" }] 
+        },
+        { status: 400 }
+      )
+    }
+
+    // Check if DNI already exists
+    const existingAdoptante = await getAdoptanteByDNI(nro_dni)
+    if (existingAdoptante) {
+      return NextResponse.json(
+        { 
+          error: "El DNI ya está registrado", 
+          errors: [{ field: "nro_dni", message: "Este DNI ya está registrado" }] 
+        },
+        { status: 400 }
+      )
+    }
+
+    // Get the "adoptante" role
+    const adoptanteRole = await getRoleByName("adoptante")
+    if (!adoptanteRole) {
+      return NextResponse.json({ error: "Error de configuración del sistema" }, { status: 500 })
+    }
 
     // Hash password
     const password_hash = await hashPassword(password)
 
-    // TODO: Insert user into database
-    // await query(
-    //   "INSERT INTO usuarios (nombre_completo, correo, password_hash, rol, estado) VALUES ($1, $2, $3, $4, $5)",
-    //   [nombre_completo, correo, password_hash, "usuario", "activo"]
-    // )
+    // Create user in database
+    const newUser = await insertUsuario({
+      correo,
+      password: password_hash,
+      rol_id: adoptanteRole.id
+    })
 
-    // For now, return success (will be implemented when database is connected)
+    // Create adoptante record
+    await insertAdoptante({
+      nombres: nombres.trim(),
+      apellidos: apellidos.trim(),
+      nro_dni: nro_dni.trim(),
+      usuario_id: newUser.usuario_id
+    })
+
     return NextResponse.json(
       {
         success: true,
         message: "Cuenta creada con éxito",
       },
-      { status: 201 },
+      { status: 201 }
     )
   } catch (error) {
-    console.error("[v0] Registration error:", error)
+    console.error("[REGISTRO] Registration error:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

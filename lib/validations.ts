@@ -6,15 +6,34 @@ export interface ValidationError {
 }
 
 export function validateRegistrationForm(data: {
-  nombre_completo: string
+  nombres: string
+  apellidos: string
+  nro_dni: string
   correo: string
   password: string
   confirmar_password: string
 }): ValidationError[] {
   const errors: ValidationError[] = []
 
-  if (!data.nombre_completo || data.nombre_completo.trim().length === 0) {
-    errors.push({ field: "nombre_completo", message: "El nombre completo es obligatorio" })
+  if (!data.nombres || data.nombres.trim().length === 0) {
+    errors.push({ field: "nombres", message: "Los nombres son obligatorios" })
+  } else if (data.nombres.trim().length < 2) {
+    errors.push({ field: "nombres", message: "Los nombres deben tener al menos 2 caracteres" })
+  }
+
+  if (!data.apellidos || data.apellidos.trim().length === 0) {
+    errors.push({ field: "apellidos", message: "Los apellidos son obligatorios" })
+  } else if (data.apellidos.trim().length < 2) {
+    errors.push({ field: "apellidos", message: "Los apellidos deben tener al menos 2 caracteres" })
+  }
+
+  if (!data.nro_dni || data.nro_dni.trim().length === 0) {
+    errors.push({ field: "nro_dni", message: "El DNI es obligatorio" })
+  } else {
+    const dniRegex = /^\d{8}$/
+    if (!dniRegex.test(data.nro_dni.trim())) {
+      errors.push({ field: "nro_dni", message: "El DNI debe tener 8 dígitos" })
+    }
   }
 
   if (!data.correo || data.correo.trim().length === 0) {
