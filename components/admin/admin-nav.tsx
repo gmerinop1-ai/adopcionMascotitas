@@ -1,8 +1,13 @@
+"use client"
+
 import Link from "next/link"
-import { PawPrint, LayoutDashboard, PlusCircle, FileText } from "lucide-react"
+import { PawPrint, LayoutDashboard, PlusCircle, FileText, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
 
 export function AdminNav() {
+  const { logout, user } = useAuth()
+
   return (
     <nav className="border-b bg-card">
       <div className="container mx-auto max-w-7xl px-4">
@@ -36,8 +41,15 @@ export function AdminNav() {
           </div>
 
           <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              Hola, {user?.correo}
+            </span>
             <Button asChild variant="outline" size="sm">
               <Link href="/mascotas">Ver Sitio Público</Link>
+            </Button>
+            <Button onClick={logout} variant="ghost" size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar Sesión
             </Button>
           </div>
         </div>

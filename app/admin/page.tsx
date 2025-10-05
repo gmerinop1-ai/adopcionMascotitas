@@ -1,17 +1,19 @@
 import { AdminNav } from "@/components/admin/admin-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PawPrint, FileText, CheckCircle, Clock } from "lucide-react"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 
 export default function AdminDashboardPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <AdminNav />
+    <ProtectedRoute requiredRole="administrador">
+      <div className="min-h-screen bg-background">
+        <AdminNav />
 
-      <main className="container mx-auto max-w-7xl py-8 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
-          <p className="text-muted-foreground mt-1">Resumen general del sistema de adopción</p>
-        </div>
+        <main className="container mx-auto max-w-7xl py-8 px-4">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
+            <p className="text-muted-foreground mt-1">Resumen general del sistema de adopción</p>
+          </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
@@ -119,5 +121,6 @@ export default function AdminDashboardPage() {
         </div>
       </main>
     </div>
+    </ProtectedRoute>
   )
 }
