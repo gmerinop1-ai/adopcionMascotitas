@@ -13,10 +13,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { validateMascotaForm } from "@/lib/validations"
-import { Loader2, Upload } from "lucide-react"
+import { Loader2, Upload, Plus, X } from "lucide-react"
 
 interface MascotaFormProps {
   mascotaId?: string
+}
+
+interface Vacuna {
+  tipo: string
+  fecha: string
+}
+
+interface Tratamiento {
+  diagnostico: string
+  plan: string
+  medicacion: string
+  frecuencia: string
+  fecha: string
 }
 
 export function MascotaForm({ mascotaId }: MascotaFormProps) {
@@ -39,11 +52,9 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
     esterilizado: false,
   })
 
-  const [datosMedicos, setDatosMedicos] = useState({
-    vacunas: "",
-    desparasitacion: "",
-    tratamientos: "",
-  })
+  const [vacunas, setVacunas] = useState<Vacuna[]>([])
+  const [tratamientos, setTratamientos] = useState<Tratamiento[]>([])
+  const [previewImage, setPreviewImage] = useState<string>("")
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -75,6 +86,9 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
           nota_estado: data.mascota.nota_estado || "",
           esterilizado: data.mascota.esterilizado || false,
         })
+        if (data.mascota.foto_url) {
+          setPreviewImage(data.mascota.foto_url)
+        }
       }
     } catch (error) {
       console.error("[v0] Error fetching mascota:", error)
@@ -82,8 +96,15 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type } = e.target
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData((prev) => ({ ...prev, [name]: checked }))
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
+    
+    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -102,6 +123,68 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
         return newErrors
       })
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.match(/^image\/(jpeg|png)$/)) {
+        setErrors(prev => ({ ...prev, foto_url: "Solo se permiten archivos JPEG y PNG" }))
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        setPreviewImage(result)
+        setFormData(prev => ({ ...prev, foto_url: file.name }))
+        
+        // Clear error
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          delete newErrors.foto_url
+          return newErrors
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Vacunas functions
+  const addVacuna = () => {
+    setVacunas(prev => [...prev, { tipo: "", fecha: "" }])
+  }
+
+  const removeVacuna = (index: number) => {
+    setVacunas(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateVacuna = (index: number, field: keyof Vacuna, value: string) => {
+    setVacunas(prev => prev.map((vacuna, i) => 
+      i === index ? { ...vacuna, [field]: value } : vacuna
+    ))
+  }
+
+  // Tratamientos functions
+  const addTratamiento = () => {
+    setTratamientos(prev => [...prev, { 
+      diagnostico: "", 
+      plan: "", 
+      medicacion: "", 
+      frecuencia: "", 
+      fecha: "" 
+    }])
+  }
+
+  const removeTratamiento = (index: number) => {
+    setTratamientos(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateTratamiento = (index: number, field: keyof Tratamiento, value: string) => {
+    setTratamientos(prev => prev.map((tratamiento, i) => 
+      i === index ? { ...tratamiento, [field]: value } : tratamiento
+    ))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +222,8 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
         body: JSON.stringify({
           ...formData,
           edad: formData.edad ? Number.parseInt(formData.edad) : null,
-          datosMedicos,
+          vacunas,
+          tratamientos,
         }),
       })
 
@@ -163,23 +247,24 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
         router.push("/admin/mascotas")
       }, 1500)
     } catch (error) {
-      setErrors({ general: "Error de conexión. Por favor, intenta de nuevo." })
+      console.error("[v0] Error saving mascota:", error)
+      setErrors({ general: "Error de conexión. Inténtalo de nuevo." })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {errors.general && (
-        <Alert variant="destructive">
-          <AlertDescription>{errors.general}</AlertDescription>
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {successMessage && (
+        <Alert className="border-green-200 bg-green-50">
+          <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
         </Alert>
       )}
 
-      {successMessage && (
-        <Alert className="bg-accent/10 text-accent-foreground border-accent">
-          <AlertDescription>{successMessage}</AlertDescription>
+      {errors.general && (
+        <Alert className="border-red-200 bg-red-50">
+          <AlertDescription className="text-red-800">{errors.general}</AlertDescription>
         </Alert>
       )}
 
@@ -190,39 +275,35 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
           <CardDescription>Datos principales de la mascota</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nombre">
-                Nombre <span className="text-destructive">*</span>
+                Nombre <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="nombre"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
-                className={errors.nombre ? "border-destructive" : ""}
+                placeholder="Nombre de la mascota"
                 disabled={isLoading}
               />
-              {errors.nombre && <p className="text-sm text-destructive">{errors.nombre}</p>}
+              {errors.nombre && <p className="text-sm text-red-500">{errors.nombre}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="especie">
-                Especie <span className="text-destructive">*</span>
+                Especie <span className="text-red-500">*</span>
               </Label>
-              <Select value={formData.especie} onValueChange={(value) => handleSelectChange("especie", value)}>
-                <SelectTrigger className={errors.especie ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Selecciona especie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="perro">Perro</SelectItem>
-                  <SelectItem value="gato">Gato</SelectItem>
-                  <SelectItem value="conejo">Conejo</SelectItem>
-                  <SelectItem value="ave">Ave</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.especie && <p className="text-sm text-destructive">{errors.especie}</p>}
+              <Input
+                id="especie"
+                name="especie"
+                value={formData.especie}
+                onChange={handleChange}
+                placeholder="Ej: Perro, Gato"
+                disabled={isLoading}
+              />
+              {errors.especie && <p className="text-sm text-red-500">{errors.especie}</p>}
             </div>
 
             <div className="space-y-2">
@@ -232,25 +313,25 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
                 name="raza"
                 value={formData.raza}
                 onChange={handleChange}
-                placeholder="Opcional"
+                placeholder="Raza de la mascota"
                 disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="sexo">
-                Sexo <span className="text-destructive">*</span>
+                Sexo <span className="text-red-500">*</span>
               </Label>
               <Select value={formData.sexo} onValueChange={(value) => handleSelectChange("sexo", value)}>
-                <SelectTrigger className={errors.sexo ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Selecciona sexo" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el sexo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="macho">Macho</SelectItem>
                   <SelectItem value="hembra">Hembra</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.sexo && <p className="text-sm text-destructive">{errors.sexo}</p>}
+              {errors.sexo && <p className="text-sm text-red-500">{errors.sexo}</p>}
             </div>
 
             <div className="space-y-2">
@@ -260,21 +341,20 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
                 name="edad"
                 type="number"
                 min="0"
-                max="20"
+                max="25"
                 value={formData.edad}
                 onChange={handleChange}
-                placeholder="0-20"
-                className={errors.edad ? "border-destructive" : ""}
+                placeholder="Edad en años"
                 disabled={isLoading}
               />
-              {errors.edad && <p className="text-sm text-destructive">{errors.edad}</p>}
+              {errors.edad && <p className="text-sm text-red-500">{errors.edad}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="tamano">Tamaño</Label>
               <Select value={formData.tamano} onValueChange={(value) => handleSelectChange("tamano", value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona tamaño" />
+                  <SelectValue placeholder="Selecciona el tamaño" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pequeño">Pequeño</SelectItem>
@@ -284,7 +364,7 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
               </Select>
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="ubicacion">Ubicación (Ciudad/Distrito)</Label>
               <Input
                 id="ubicacion"
@@ -299,24 +379,29 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="foto_url">
-              URL de Foto Principal <span className="text-destructive">*</span>
+              Foto de la Mascota <span className="text-red-500">*</span>
             </Label>
-            <div className="flex gap-2">
-              <Input
-                id="foto_url"
-                name="foto_url"
-                value={formData.foto_url}
-                onChange={handleChange}
-                placeholder="https://ejemplo.com/foto.jpg"
-                className={errors.foto_url ? "border-destructive" : ""}
-                disabled={isLoading}
-              />
-              <Button type="button" variant="outline" disabled>
-                <Upload className="h-4 w-4" />
-              </Button>
-            </div>
-            {errors.foto_url && <p className="text-sm text-destructive">{errors.foto_url}</p>}
-            <p className="text-xs text-muted-foreground">Formatos aceptados: JPG, PNG</p>
+            <Input
+              id="foto_url"
+              name="foto_url"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleFileChange}
+              disabled={isLoading}
+            />
+            <p className="text-sm text-muted-foreground">Formatos permitidos: JPEG, PNG</p>
+            {errors.foto_url && <p className="text-sm text-red-500">{errors.foto_url}</p>}
+            
+            {previewImage && (
+              <div className="mt-4">
+                <p className="text-sm font-medium mb-2">Vista previa:</p>
+                <img
+                  src={previewImage}
+                  alt="Vista previa"
+                  className="w-32 h-32 object-cover rounded-lg border"
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -326,8 +411,8 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
               name="descripcion"
               value={formData.descripcion}
               onChange={handleChange}
-              placeholder="Describe la personalidad y características de la mascota..."
-              rows={4}
+              placeholder="Descripción de la personalidad y características de la mascota"
+              rows={3}
               disabled={isLoading}
             />
           </div>
@@ -336,11 +421,11 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
             <Checkbox
               id="esterilizado"
               checked={formData.esterilizado}
-              onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, esterilizado: checked as boolean }))}
+              onCheckedChange={(checked) => 
+                setFormData(prev => ({ ...prev, esterilizado: !!checked }))
+              }
             />
-            <Label htmlFor="esterilizado" className="cursor-pointer">
-              Esterilizado
-            </Label>
+            <Label htmlFor="esterilizado">¿Está esterilizado?</Label>
           </div>
         </CardContent>
       </Card>
@@ -351,51 +436,150 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
           <CardTitle>Datos Médicos</CardTitle>
           <CardDescription>Información sobre vacunas, desparasitación y tratamientos</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="vacunas">Vacunas</Label>
-            <Textarea
-              id="vacunas"
-              value={datosMedicos.vacunas}
-              onChange={(e) => setDatosMedicos((prev) => ({ ...prev, vacunas: e.target.value }))}
-              placeholder="Ej: Rabia (15/01/2024), Parvovirus (20/01/2024)"
-              rows={2}
-              disabled={isLoading}
-            />
+        <CardContent className="space-y-6">
+          
+          {/* Vacunas/Desparasitación */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">Vacunas/Desparasitación</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addVacuna}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Vacuna
+              </Button>
+            </div>
+            
+            {vacunas.map((vacuna, index) => (
+              <div key={index} className="flex gap-4 items-end p-4 border rounded-lg">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor={`vacuna-tipo-${index}`}>Tipo de Vacuna/Desparasitante</Label>
+                  <Input
+                    id={`vacuna-tipo-${index}`}
+                    value={vacuna.tipo}
+                    onChange={(e) => updateVacuna(index, "tipo", e.target.value)}
+                    placeholder="Ej: Rabia, Parvovirus"
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor={`vacuna-fecha-${index}`}>Fecha de Aplicación</Label>
+                  <Input
+                    id={`vacuna-fecha-${index}`}
+                    type="date"
+                    value={vacuna.fecha}
+                    onChange={(e) => updateVacuna(index, "fecha", e.target.value)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => removeVacuna(index)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            
+            {vacunas.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">
+                No hay vacunas registradas. Haz clic en "Agregar Vacuna" para añadir una.
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="desparasitacion">Desparasitación</Label>
-            <Textarea
-              id="desparasitacion"
-              value={datosMedicos.desparasitacion}
-              onChange={(e) => setDatosMedicos((prev) => ({ ...prev, desparasitacion: e.target.value }))}
-              placeholder="Ej: Interna (10/02/2024), Externa (10/02/2024)"
-              rows={2}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tratamientos">Tratamientos Actuales</Label>
-            <Textarea
-              id="tratamientos"
-              value={datosMedicos.tratamientos}
-              onChange={(e) => setDatosMedicos((prev) => ({ ...prev, tratamientos: e.target.value }))}
-              placeholder="Ej: Antibiótico por infección, 2 veces al día, hasta 20/03/2024"
-              rows={3}
-              disabled={isLoading}
-            />
+          {/* Tratamientos */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">Tratamientos</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addTratamiento}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Tratamiento
+              </Button>
+            </div>
+            
+            {tratamientos.map((tratamiento, index) => (
+              <div key={index} className="p-4 border rounded-lg space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Tratamiento #{index + 1}</h4>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => removeTratamiento(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`tratamiento-diagnostico-${index}`}>Diagnóstico</Label>
+                    <Input
+                      id={`tratamiento-diagnostico-${index}`}
+                      value={tratamiento.diagnostico}
+                      onChange={(e) => updateTratamiento(index, "diagnostico", e.target.value)}
+                      placeholder="Diagnóstico médico"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`tratamiento-medicacion-${index}`}>Medicación</Label>
+                    <Input
+                      id={`tratamiento-medicacion-${index}`}
+                      value={tratamiento.medicacion}
+                      onChange={(e) => updateTratamiento(index, "medicacion", e.target.value)}
+                      placeholder="Medicamentos prescritos"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`tratamiento-frecuencia-${index}`}>Frecuencia</Label>
+                    <Input
+                      id={`tratamiento-frecuencia-${index}`}
+                      value={tratamiento.frecuencia}
+                      onChange={(e) => updateTratamiento(index, "frecuencia", e.target.value)}
+                      placeholder="Ej: Cada 8 horas, 2 veces al día"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`tratamiento-fecha-${index}`}>Fecha de Inicio</Label>
+                    <Input
+                      id={`tratamiento-fecha-${index}`}
+                      type="date"
+                      value={tratamiento.fecha}
+                      onChange={(e) => updateTratamiento(index, "fecha", e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor={`tratamiento-plan-${index}`}>Plan de Tratamiento</Label>
+                  <Textarea
+                    id={`tratamiento-plan-${index}`}
+                    value={tratamiento.plan}
+                    onChange={(e) => updateTratamiento(index, "plan", e.target.value)}
+                    placeholder="Descripción detallada del plan de tratamiento"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ))}
+            
+            {tratamientos.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">
+                No hay tratamientos registrados. Haz clic en "Agregar Tratamiento" para añadir uno.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Estado */}
+      {/* Estado y Gestión */}
       {isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Estado de Disponibilidad</CardTitle>
-            <CardDescription>Gestiona la visibilidad de la mascota en el catálogo público</CardDescription>
+            <CardTitle>Estado y Gestión</CardTitle>
+            <CardDescription>Gestiona el estado de disponibilidad de la mascota</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -415,17 +599,17 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
             {formData.estado === "no_disponible" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="motivo_no_disponible">Motivo</Label>
-                  <Select
-                    value={formData.motivo_no_disponible}
+                  <Label htmlFor="motivo_no_disponible">Motivo del Retiro</Label>
+                  <Select 
+                    value={formData.motivo_no_disponible} 
                     onValueChange={(value) => handleSelectChange("motivo_no_disponible", value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona motivo" />
+                      <SelectValue placeholder="Selecciona un motivo" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="adoptada">Adoptada</SelectItem>
-                      <SelectItem value="en_tratamiento">En Tratamiento</SelectItem>
+                      <SelectItem value="en_tratamiento">En tratamiento</SelectItem>
                       <SelectItem value="reintegrada">Reintegrada</SelectItem>
                       <SelectItem value="fallecida">Fallecida</SelectItem>
                       <SelectItem value="otro">Otro</SelectItem>
