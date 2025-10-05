@@ -11,9 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { validateLoginForm } from "@/lib/validations"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 export function LoginForm() {
   const router = useRouter()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     correo: "",
     password: "",
@@ -74,7 +76,9 @@ export function LoginForm() {
         return
       }
 
-      // Success - redirect based on role
+      // Success - login user and redirect based on role
+      login(data.user)
+      
       if (data.user.rol === "administrador") {
         router.push("/admin")
       } else {
