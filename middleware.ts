@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Protected user routes
-  if (pathname.startsWith('/mascotas') || pathname.startsWith('/mis-procesos')) {
+  if (pathname.startsWith('/mascotas')) {
     // In a real application, you would validate the JWT token here
     // For now, we'll let the client-side ProtectedRoute handle the protection
     return NextResponse.next()

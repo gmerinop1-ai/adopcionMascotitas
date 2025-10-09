@@ -265,7 +265,7 @@ export function RegistrationForm() {
             <ul className="mt-2 space-y-1">
               <li>• Ver y buscar mascotas disponibles</li>
               <li>• Enviar solicitudes de adopción</li>
-              <li>• Hacer seguimiento a tus procesos</li>
+
             </ul>
           </div>
         </form>

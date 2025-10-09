@@ -56,9 +56,6 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="perro">Perro</SelectItem>
               <SelectItem value="gato">Gato</SelectItem>
-              <SelectItem value="conejo">Conejo</SelectItem>
-              <SelectItem value="ave">Ave</SelectItem>
-              <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>

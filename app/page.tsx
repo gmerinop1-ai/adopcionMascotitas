@@ -11,7 +11,7 @@ export default function HomePage() {
         <div className="container mx-auto max-w-6xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
             <PawPrint className="h-4 w-4" />
-            <span>Plataforma de Adopción Responsable</span>
+            <span>Catálogo de Mascotas</span>
           </div>
 
           <h1 className="mb-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
@@ -19,7 +19,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mx-auto mb-8 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Miles de mascotas esperan por un hogar lleno de amor. Adopta, no compres. Cambia una vida y transforma la
+            Miles de mascotas esperan por un hogar lleno de amor. Cambia una vida y transforma la
             tuya.
           </p>
 
@@ -50,8 +50,8 @@ export default function HomePage() {
                 </div>
                 <h3 className="mb-2 text-xl font-semibold">Adopción Responsable</h3>
                 <p className="text-muted-foreground">
-                  Proceso de adopción cuidadoso que asegura el bienestar de las mascotas y la compatibilidad con las
-                  familias.
+                  Proceso de adopción cuidadoso que asegura el bienestar de las mascotas y la
+                  compatibilidad con las familias.
                 </p>
               </CardContent>
             </Card>
@@ -73,9 +73,9 @@ export default function HomePage() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/50">
                   <Users className="h-6 w-6 text-secondary-foreground" />
                 </div>
-                <h3 className="mb-2 text-xl font-semibold">Seguimiento Continuo</h3>
+                <h3 className="mb-2 text-xl font-semibold">Cuidado Garantizado</h3>
                 <p className="text-muted-foreground">
-                  Te acompañamos durante todo el proceso y después de la adopción para asegurar una transición exitosa.
+                  Nuestras mascotas reciben el mejor cuidado y atención veterinaria mientras esperan su nuevo hogar.
                 </p>
               </CardContent>
             </Card>
@@ -86,12 +86,12 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="bg-primary/5 py-16 px-4">
         <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="mb-4 text-3xl font-bold">¿Listo para adoptar?</h2>
+          <h2 className="mb-4 text-3xl font-bold">¿Listo para ver nuestras mascotas?</h2>
           <p className="mb-8 text-lg text-muted-foreground">
-            Regístrate hoy y comienza el proceso de adopción. Es rápido, fácil y gratuito.
+            Explora nuestro catálogo completo de mascotas disponibles.
           </p>
           <Button asChild size="lg">
-            <Link href="/registro">Crear Cuenta Gratis</Link>
+            <Link href="/mascotas">Ver Catálogo Completo</Link>
           </Button>
         </div>
       </section>

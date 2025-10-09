@@ -20,20 +20,8 @@ export function PublicNav() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary">
               <PawPrint className="h-6 w-6" />
-              <span>Adopta una Mascota</span>
+              <span>Catálogo de Mascotas</span>
             </Link>
-
-            <div className="hidden md:flex items-center gap-2">
-              <Button asChild variant={pathname === "/mascotas" ? "default" : "ghost"} size="sm">
-                <Link href="/mascotas">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Adoptar
-                </Link>
-              </Button>
-              <Button asChild variant={pathname === "/mis-procesos" ? "default" : "ghost"} size="sm">
-                <Link href="/mis-procesos">Mis Procesos</Link>
-              </Button>
-            </div>
           </div>
 
           <div className="flex items-center gap-2">

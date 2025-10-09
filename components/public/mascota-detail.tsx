@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Mascota } from "@/lib/db"
-import { ArrowLeft, Heart, MapPin, Shield, Loader2 } from "lucide-react"
+import { ArrowLeft, MapPin, Shield, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -166,15 +166,7 @@ export function MascotaDetail({ mascotaId }: MascotaDetailProps) {
             </CardContent>
           </Card>
 
-          {/* CTA Button */}
-          {mascota.estado === "disponible" && (
-            <Button size="lg" className="w-full" asChild>
-              <Link href={`/mascotas/${mascota.id}/postular`}>
-                <Heart className="mr-2 h-5 w-5" />
-                Postular a Adopción
-              </Link>
-            </Button>
-          )}
+
         </div>
       </div>
     </div>
