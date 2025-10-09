@@ -9,6 +9,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+
+  transpilePackages: ['lucide-react', 'geist'],
 }
 
 export default nextConfig

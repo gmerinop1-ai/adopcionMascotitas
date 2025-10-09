@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { supabase } from '@/lib/db'
 
 export async function POST(request: Request) {
   try {
@@ -15,14 +12,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
+    // Intentar actualizar la contraseña usando el token de recuperación
+    const { data, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      console.error('Error al obtener la sesión:', sessionError)
+      return NextResponse.json(
+        { error: 'Error al verificar la sesión' },
+        { status: 401 }
+      )
+    }
 
-    // Intentar actualizar la contraseña
+    // Actualizar la contraseña
     const { error } = await supabase.auth.updateUser({
       password: password
     })
