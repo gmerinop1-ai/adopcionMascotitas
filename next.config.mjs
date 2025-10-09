@@ -10,7 +10,13 @@ const nextConfig = {
     unoptimized: true,
   },
 
-  transpilePackages: ['lucide-react', 'geist'],
+  transpilePackages: [
+    'lucide-react', 
+    'geist',
+    'input-otp', 
+    'react-day-picker', 
+    'sonner'
+  ],
 }
 
 export default nextConfig

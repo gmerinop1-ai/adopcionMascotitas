@@ -1,0 +1,25 @@
+# Render configuration
+services:
+  - type: web
+    name: adopcion-mascotas
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        fromGroup: supabase
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        fromGroup: supabase
+      - key: EMAIL_SERVER_HOST
+        fromGroup: email
+      - key: EMAIL_SERVER_PORT
+        fromGroup: email
+      - key: EMAIL_SERVER_USER
+        fromGroup: email
+      - key: EMAIL_SERVER_PASSWORD
+        fromGroup: email
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://adopcion-mascotas.onrender.com
