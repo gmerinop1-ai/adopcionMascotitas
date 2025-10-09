@@ -8,7 +8,10 @@ import { useAuth } from "@/contexts/auth-context"
 
 export function PublicNav() {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { user, logout, isLoading, isHydrated } = useAuth()
+
+  // Prevent hydration mismatch by not rendering user-dependent content until hydrated
+  const shouldShowUserContent = isHydrated && !isLoading
 
   return (
     <nav className="border-b bg-card sticky top-0 z-50">
@@ -34,7 +37,13 @@ export function PublicNav() {
           </div>
 
           <div className="flex items-center gap-2">
-            {user ? (
+            {!shouldShowUserContent ? (
+              // Show skeleton/placeholder during loading and hydration
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-32 bg-muted animate-pulse rounded-md"></div>
+                <div className="h-9 w-24 bg-muted animate-pulse rounded-md"></div>
+              </div>
+            ) : user ? (
               <>
                 <span className="text-sm text-muted-foreground hidden sm:block">
                   Hola, {user.nombres || user.correo}

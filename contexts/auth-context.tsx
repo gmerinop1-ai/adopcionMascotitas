@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (user: User) => void
   logout: () => void
   isLoading: boolean
+  isHydrated: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,18 +25,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    // Mark as hydrated to prevent SSR/client mismatch
+    setIsHydrated(true)
+    
     // Check if user is logged in on mount
-    const userData = localStorage.getItem("user")
+    const userData = typeof window !== 'undefined' ? localStorage.getItem("user") : null
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData)
         setUser(parsedUser)
       } catch (error) {
         console.error("Error parsing user data:", error)
-        localStorage.removeItem("user")
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem("user")
+        }
       }
     }
     setIsLoading(false)
@@ -43,17 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: User) => {
     setUser(userData)
-    localStorage.setItem("user", JSON.stringify(userData))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("user", JSON.stringify(userData))
+    }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem("user")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("user")
+    }
     router.push("/login")
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, isHydrated }}>
       {children}
     </AuthContext.Provider>
   )
