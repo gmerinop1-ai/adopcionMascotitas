@@ -53,10 +53,6 @@ export default function LoginPage() {
         <LoginForm />
 
         <div className="mt-6 space-y-4 text-center text-sm">
-          <Link href="/recuperar-password" className="block text-primary hover:underline">
-            ¿Olvidaste tu contraseña?
-          </Link>
-
           <p className="text-muted-foreground">
             ¿No tienes cuenta?{" "}
             <Link href="/registro" className="font-medium text-primary hover:underline">

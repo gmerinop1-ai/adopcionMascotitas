@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -157,6 +158,25 @@ export function LoginForm() {
               "Iniciar Sesión"
             )}
           </Button>
+
+          <div className="space-y-2">
+            <div className="text-center">
+              <Link 
+                href="/recuperar-password"
+                className="text-sm text-primary hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+            <div className="text-center">
+              <Link 
+                href="/"
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                Volver al inicio
+              </Link>
+            </div>
+          </div>
         </form>
       </CardContent>
     </Card>
