@@ -151,9 +151,13 @@ export function MascotasTable() {
                   <TableCell>
                     <div className="h-12 w-12 rounded-lg overflow-hidden bg-secondary">
                       <img
-                        src={mascota.url_foto || "/placeholder.svg"}
+                        src={mascota.foto_url || "/placeholder.svg"}
                         alt={mascota.nombre}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          console.error('Image load error for mascota:', mascota.nombre, 'URL:', mascota.foto_url)
+                          e.currentTarget.src = "/placeholder.svg"
+                        }}
                       />
                     </div>
                   </TableCell>

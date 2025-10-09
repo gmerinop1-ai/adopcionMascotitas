@@ -55,6 +55,7 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
   const [vacunas, setVacunas] = useState<Vacuna[]>([])
   const [tratamientos, setTratamientos] = useState<Tratamiento[]>([])
   const [previewImage, setPreviewImage] = useState<string>("")
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -127,12 +128,27 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    console.log('File selected:', file ? {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    } : 'No file selected')
+
     if (file) {
       // Validate file type
       if (!file.type.match(/^image\/(jpeg|png)$/)) {
         setErrors(prev => ({ ...prev, foto_url: "Solo se permiten archivos JPEG y PNG" }))
         return
       }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, foto_url: "El archivo no puede superar los 5MB" }))
+        return
+      }
+      
+      console.log('File validation passed, setting selectedFile')
+      setSelectedFile(file)
       
       const reader = new FileReader()
       reader.onload = () => {
@@ -148,6 +164,11 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
         })
       }
       reader.readAsDataURL(file)
+    } else {
+      console.log('No file selected, clearing selectedFile')
+      setSelectedFile(null)
+      setPreviewImage("")
+      setFormData(prev => ({ ...prev, foto_url: "" }))
     }
   }
 
@@ -192,6 +213,10 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
     setErrors({})
     setSuccessMessage("")
 
+    console.log('=== FORM SUBMIT DEBUG ===')
+    console.log('selectedFile:', selectedFile)
+    console.log('formData:', formData)
+
     // Validate form
     const validationErrors = validateMascotaForm({
       nombre: formData.nombre,
@@ -216,18 +241,61 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
       const url = isEditing ? `/api/admin/mascotas/${mascotaId}` : "/api/admin/mascotas"
       const method = isEditing ? "PUT" : "POST"
 
+      console.log('=== SENDING REQUEST ===')
+      console.log('URL:', url)
+      console.log('Method:', method)
+
+      // Create FormData for file upload
+      const formDataToSend = new FormData()
+      
+      // Add text fields
+      formDataToSend.append('nombre', formData.nombre)
+      formDataToSend.append('especie', formData.especie)
+      if (formData.raza) formDataToSend.append('raza', formData.raza)
+      if (formData.sexo) formDataToSend.append('sexo', formData.sexo)
+      if (formData.edad) formDataToSend.append('edad', formData.edad)
+      if (formData.tamano) formDataToSend.append('tamano', formData.tamano)
+      formDataToSend.append('estado', formData.estado)
+      
+      // Add photo if selected
+      console.log('selectedFile in handleSubmit:', selectedFile ? {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type
+      } : 'No file selected')
+
+      if (selectedFile) {
+        formDataToSend.append('photo', selectedFile)
+        console.log('Photo added to FormData')
+      } else {
+        console.log('No photo to add to FormData')
+      }
+      
+      // Add current photo URL for editing
+      if (isEditing && formData.foto_url) {
+        formDataToSend.append('currentPhotoUrl', formData.foto_url)
+      }
+
+      console.log('=== FormData Contents ===')
+      for (const [key, value] of formDataToSend.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File(${value.name}, ${value.size}bytes, ${value.type})`)
+        } else {
+          console.log(`${key}: ${value}`)
+        }
+      }
+
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          edad: formData.edad ? Number.parseInt(formData.edad) : null,
-          vacunas,
-          tratamientos,
-        }),
+        body: formDataToSend,
       })
 
+      console.log('=== RESPONSE ===')
+      console.log('Status:', response.status)
+      console.log('Headers:', Object.fromEntries(response.headers.entries()))
+
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (!response.ok) {
         if (data.errors) {
@@ -247,7 +315,7 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
         router.push("/admin/mascotas")
       }, 1500)
     } catch (error) {
-      console.error("[v0] Error saving mascota:", error)
+      console.error("Error saving mascota:", error)
       setErrors({ general: "Error de conexión. Inténtalo de nuevo." })
     } finally {
       setIsLoading(false)
