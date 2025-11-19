@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { validateSolicitudForm } from "@/lib/validations"
 import { Loader2, CheckCircle } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import type { Mascota } from "@/lib/db"
 
 interface AdoptionFormProps {
@@ -20,6 +21,7 @@ interface AdoptionFormProps {
 
 export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [mascota, setMascota] = useState<Mascota | null>(null)
   const [formData, setFormData] = useState({
     dni: "",
@@ -35,8 +37,13 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
 
   useEffect(() => {
     fetchMascota()
-    checkAuth()
   }, [mascotaId])
+
+  useEffect(() => {
+    if (user !== null) { // Solo verificar cuando user esté definido (no null)
+      checkAuth()
+    }
+  }, [user])
 
   const fetchMascota = async () => {
     try {
@@ -49,12 +56,19 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
   }
 
   const checkAuth = () => {
-    // TODO: Check if user is logged in
-    // If not, redirect to login with return URL
-    // const session = await getSession()
-    // if (!session) {
-    //   router.push(`/login?returnUrl=/mascotas/${mascotaId}/postular`)
-    // }
+    console.log("[FORM] Usuario autenticado:", user)
+    console.log("[FORM] Adoptante ID:", user?.adoptante_id)
+    
+    // Verificar si el usuario está autenticado y tiene adoptante_id
+    if (!user) {
+      setErrors({ general: "Debes iniciar sesión para postular a una adopción" })
+      return
+    }
+    
+    if (!user.adoptante_id) {
+      setErrors({ general: "Error: No se encontró información de adoptante. Por favor, contacta al soporte." })
+      return
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -73,6 +87,18 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
     e.preventDefault()
     setErrors({})
 
+    // Verificar autenticación antes de enviar
+    if (!user || !user.adoptante_id) {
+      setErrors({ general: "Error de autenticación. Por favor, inicia sesión nuevamente." })
+      return
+    }
+
+    console.log("[FORM] Enviando solicitud con usuario:", {
+      usuario_id: user.usuario_id,
+      adoptante_id: user.adoptante_id,
+      correo: user.correo
+    })
+
     // Validate form
     const validationErrors = validateSolicitudForm(formData)
     if (validationErrors.length > 0) {
@@ -87,16 +113,22 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
     setIsLoading(true)
 
     try {
+      console.log("[FORM] Datos del formulario:", formData)
+      console.log("[FORM] Datos del usuario:", user)
+
       const response = await fetch("/api/solicitudes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
           mascota_id: mascotaId,
+          user: user, // Incluir información del usuario autenticado
         }),
       })
 
       const data = await response.json()
+
+      console.log("[FORM] Respuesta del servidor:", data)
 
       if (!response.ok) {
         if (data.errors) {
@@ -113,6 +145,7 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
 
       setIsSubmitted(true)
     } catch (error) {
+      console.error("[FORM] Error enviando solicitud:", error)
       setErrors({ general: "Error de conexión. Por favor, intenta de nuevo." })
     } finally {
       setIsLoading(false)
@@ -182,10 +215,12 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
               <Input
                 id="dni"
                 name="dni"
+                type="text"
                 value={formData.dni}
                 onChange={handleChange}
                 placeholder="12345678"
                 maxLength={8}
+                pattern="\d{8}"
                 className={errors.dni ? "border-destructive" : ""}
                 disabled={isLoading}
               />
@@ -199,9 +234,12 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
               <Input
                 id="telefono"
                 name="telefono"
+                type="tel"
                 value={formData.telefono}
                 onChange={handleChange}
                 placeholder="987654321"
+                maxLength={9}
+                pattern="9\d{8}"
                 className={errors.telefono ? "border-destructive" : ""}
                 disabled={isLoading}
               />

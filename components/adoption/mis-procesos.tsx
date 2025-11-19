@@ -4,27 +4,29 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Eye } from "lucide-react"
+import { Loader2, Eye, Calendar, Clock } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import type { SolicitudAdopcion } from "@/lib/db"
 
-interface SolicitudWithMascota extends SolicitudAdopcion {
-  mascota_nombre?: string
-  mascota_foto?: string
-}
-
 export function MisProcesos() {
-  const [solicitudes, setSolicitudes] = useState<SolicitudWithMascota[]>([])
+  const { user } = useAuth()
+  const [solicitudes, setSolicitudes] = useState<SolicitudAdopcion[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetchSolicitudes()
-  }, [])
+    if (user) {
+      fetchSolicitudes()
+    }
+  }, [user])
 
   const fetchSolicitudes = async () => {
     try {
-      // TODO: Get user ID from session
-      const response = await fetch("/api/solicitudes/mis-procesos")
+      const response = await fetch("/api/solicitudes/mis-procesos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      })
       const data = await response.json()
       setSolicitudes(data.solicitudes || [])
     } catch (error) {
@@ -36,12 +38,12 @@ export function MisProcesos() {
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
-      case "pre_filtro":
-        return <Badge variant="secondary">Pre-Filtro</Badge>
+      case "pendiente":
+        return <Badge variant="secondary">Pendiente</Badge>
       case "entrevista":
-        return <Badge className="bg-primary">Entrevista</Badge>
+        return <Badge className="bg-blue-600">Entrevista Programada</Badge>
       case "aprobada":
-        return <Badge className="bg-accent text-accent-foreground">Aprobada</Badge>
+        return <Badge className="bg-green-600">Aprobada</Badge>
       case "rechazada":
         return <Badge variant="destructive">Rechazada</Badge>
       case "cancelada":
@@ -51,14 +53,22 @@ export function MisProcesos() {
     }
   }
 
-  const getEstadoDescription = (estado: string) => {
+  const getEstadoDescription = (estado: string, fechaEntrevista?: string) => {
     switch (estado) {
-      case "pre_filtro":
+      case "pendiente":
         return "Tu solicitud está siendo revisada por nuestro equipo"
       case "entrevista":
-        return "Nos pondremos en contacto contigo para coordinar una entrevista"
+        return fechaEntrevista 
+          ? `Entrevista programada para el ${new Date(fechaEntrevista).toLocaleDateString("es-ES", {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}`
+          : "Nos pondremos en contacto contigo para coordinar una entrevista"
       case "aprobada":
-        return "¡Felicidades! Tu solicitud ha sido aprobada"
+        return "¡Felicidades! Tu solicitud ha sido aprobada. Puedes proceder con la adopción"
       case "rechazada":
         return "Lamentablemente tu solicitud no fue aprobada en esta ocasión"
       case "cancelada":
@@ -66,6 +76,14 @@ export function MisProcesos() {
       default:
         return ""
     }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("es-ES", {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
 
   if (isLoading) {
@@ -93,6 +111,13 @@ export function MisProcesos() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Mis Procesos de Adopción</h2>
+        <Badge variant="outline" className="text-sm">
+          {solicitudes.length} solicitud{solicitudes.length !== 1 ? 'es' : ''}
+        </Badge>
+      </div>
+
       {solicitudes.map((solicitud) => (
         <Card key={solicitud.id}>
           <CardHeader>
@@ -109,24 +134,62 @@ export function MisProcesos() {
                 )}
                 <div>
                   <CardTitle className="mb-1">{solicitud.mascota_nombre || "Mascota"}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Solicitud #{solicitud.id} • {new Date(solicitud.created_at).toLocaleDateString("es-ES")}
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Solicitud #{solicitud.id.slice(0, 8)}</span>
+                    {solicitud.created_at && (
+                      <>
+                        <span>•</span>
+                        <span>Enviada el {formatDate(solicitud.created_at)}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               {getEstadoBadge(solicitud.estado)}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">{getEstadoDescription(solicitud.estado)}</p>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {getEstadoDescription(solicitud.estado, solicitud.fecha_entrevista)}
+              </p>
 
-            <div className="flex gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/mascotas/${solicitud.mascota_id}`}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ver Mascota
-                </Link>
-              </Button>
+              {solicitud.estado === "entrevista" && solicitud.fecha_entrevista && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Calendar className="h-4 w-4" />
+                      <span className="font-medium">Próxima entrevista</span>
+                    </div>
+                    <p className="text-blue-600 mt-1">
+                      {new Date(solicitud.fecha_entrevista).toLocaleDateString("es-ES", {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/mascotas/${solicitud.mascota_id}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Ver Mascota
+                  </Link>
+                </Button>
+                
+                {solicitud.estado === "entrevista" && (
+                  <Button variant="secondary" size="sm">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Recordatorio
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
