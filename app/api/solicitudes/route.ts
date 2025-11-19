@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       telefono, 
       distrito_ciudad: distrito,
       razon: motivacion,
-      condicion_hogar: condiciones_hogar,
+      condicion_hogar: `${condiciones_hogar}||DISPONIBILIDAD: ${disponibilidad_tiempo}`,
       adoptante_id: user.adoptante_id,
       mascota_id
     }

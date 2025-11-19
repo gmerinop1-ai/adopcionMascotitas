@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { getMascotaById, updateMascota, deleteMascota, uploadPetPhoto, deletePetPhoto, supabase } from "@/lib/db"
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const params = await context.params
+    const { id } = params
     const mascota = await getMascotaById(id)
     
     if (!mascota) {
@@ -17,9 +18,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const params = await context.params
+    const { id } = params
     const formData = await request.formData()
     
     // Extract form fields

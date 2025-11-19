@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Eye, Calendar, Clock, Phone, MapPin } from "lucide-react"
+import { Loader2, Eye, Calendar, Clock, Phone, MapPin, CheckCircle, AlertCircle } from "lucide-react"
 import { SolicitudDetail } from "./solicitud-detail"
+import { useToast } from "@/hooks/use-toast"
 
 interface SolicitudWithDetails {
   id: string
@@ -29,6 +30,7 @@ interface SolicitudWithDetails {
 }
 
 export function SolicitudesTable() {
+  const { toast } = useToast()
   const [solicitudes, setSolicitudes] = useState<SolicitudWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("todas")
@@ -108,9 +110,60 @@ export function SolicitudesTable() {
 
   const submitSchedule = async () => {
     try {
+      // Validar campos requeridos
+      if (!scheduleForm.solicitud_id) {
+        toast({
+          title: "Error de validación",
+          description: "No se ha seleccionado una solicitud válida",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!scheduleForm.fecha_entrevista) {
+        toast({
+          title: "Error de validación",
+          description: "La fecha de entrevista es requerida",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validar que la fecha sea futura
+      const fechaEntrevista = new Date(scheduleForm.fecha_entrevista)
+      const ahora = new Date()
+      
+      if (isNaN(fechaEntrevista.getTime())) {
+        toast({
+          title: "Error de validación",
+          description: "Formato de fecha inválido",
+          variant: "destructive",
+        })
+        return
+      }
+      
+      if (fechaEntrevista <= ahora) {
+        toast({
+          title: "Error de validación",
+          description: "La fecha de entrevista debe ser futura",
+          variant: "destructive",
+        })
+        return
+      }
+
+      console.log("[FORM] Enviando solicitud de programación:", {
+        solicitud_id: scheduleForm.solicitud_id,
+        estado: "entrevista",
+        fecha_entrevista: scheduleForm.fecha_entrevista,
+        observaciones: scheduleForm.observaciones
+      })
+
       const response = await fetch(`/api/admin/solicitudes/${scheduleForm.solicitud_id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({
           estado: "entrevista",
           fecha_entrevista: scheduleForm.fecha_entrevista,
@@ -118,12 +171,79 @@ export function SolicitudesTable() {
         })
       })
 
+      console.log("[FORM] Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      })
+
       if (response.ok) {
+        const successData = await response.json()
+        console.log("[FORM] ✅ Entrevista programada exitosamente:", successData)
+        
         setShowScheduleDialog(false)
         fetchSolicitudes() // Refresh data
+        
+        toast({
+          title: "¡Entrevista programada!",
+          description: "La entrevista se ha programado exitosamente.",
+        })
+      } else {
+        // Intentar parsear la respuesta de error
+        let errorData = {}
+        let responseText = ""
+        
+        try {
+          responseText = await response.text()
+          console.log("[FORM] Respuesta de error como texto:", responseText)
+          
+          if (responseText && responseText.trim()) {
+            try {
+              errorData = JSON.parse(responseText)
+            } catch (jsonError) {
+              console.warn("[FORM] No se pudo parsear como JSON, usando texto plano")
+              errorData = { error: responseText }
+            }
+          } else {
+            errorData = { error: `Error ${response.status}: ${response.statusText}` }
+          }
+        } catch (textError) {
+          console.error("[FORM] Error obteniendo texto de respuesta:", textError)
+          errorData = { error: `Error ${response.status}: ${response.statusText}` }
+        }
+        
+        console.error("[FORM] Error del servidor:", errorData)
+        
+        const errorMessage = 
+          (errorData as any)?.details || 
+          (errorData as any)?.error || 
+          (errorData as any)?.message || 
+          responseText ||
+          `Error del servidor (${response.status})`
+        
+        toast({
+          title: "Error al programar entrevista",
+          description: errorMessage,
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      console.error("Error scheduling interview:", error)
+      console.error("[FORM] Error en catch scheduling interview:", error)
+      
+      let errorMessage = "No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo."
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = "Error de conexión. Verifica que el servidor esté funcionando."
+      } else if (error instanceof Error) {
+        errorMessage = `Error: ${error.message}`
+      }
+      
+      toast({
+        title: "Error de conexión",
+        description: errorMessage,
+        variant: "destructive",
+      })
     }
   }
 
@@ -309,7 +429,13 @@ export function SolicitudesTable() {
       {/* Dialog para detalles de solicitud */}
       {selectedSolicitud && (
         <Dialog open={!!selectedSolicitud} onOpenChange={() => setSelectedSolicitud(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalles de Solicitud</DialogTitle>
+              <DialogDescription>
+                Información completa de la solicitud de adopción
+              </DialogDescription>
+            </DialogHeader>
             <SolicitudDetail 
               solicitudId={selectedSolicitud} 
             />

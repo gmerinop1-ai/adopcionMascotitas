@@ -117,6 +117,7 @@ export function validateSolicitudForm(data: {
 }): ValidationError[] {
   const errors: ValidationError[] = []
 
+  // Validación de DNI
   if (!data.dni || data.dni.trim().length === 0) {
     errors.push({ field: "dni", message: "El DNI es obligatorio" })
   } else {
@@ -126,6 +127,7 @@ export function validateSolicitudForm(data: {
     }
   }
 
+  // Validación de teléfono
   if (!data.telefono || data.telefono.trim().length === 0) {
     errors.push({ field: "telefono", message: "El teléfono es obligatorio" })
   } else {
@@ -135,20 +137,38 @@ export function validateSolicitudForm(data: {
     }
   }
 
+  // Validación de distrito
   if (!data.distrito || data.distrito.trim().length === 0) {
     errors.push({ field: "distrito", message: "El distrito es obligatorio" })
+  } else if (data.distrito.trim().length < 3) {
+    errors.push({ field: "distrito", message: "El distrito debe tener al menos 3 caracteres" })
   }
 
+  // Validación de motivación - más estricta
   if (!data.motivacion || data.motivacion.trim().length === 0) {
     errors.push({ field: "motivacion", message: "La motivación es obligatoria" })
+  } else if (data.motivacion.trim().length < 20) {
+    errors.push({ field: "motivacion", message: "La motivación debe tener al menos 20 caracteres para explicar adecuadamente" })
+  } else if (data.motivacion.trim().length > 500) {
+    errors.push({ field: "motivacion", message: "La motivación no puede exceder 500 caracteres" })
   }
 
+  // Validación de disponibilidad de tiempo - más estricta
   if (!data.disponibilidad_tiempo || data.disponibilidad_tiempo.trim().length === 0) {
     errors.push({ field: "disponibilidad_tiempo", message: "La disponibilidad de tiempo es obligatoria" })
+  } else if (data.disponibilidad_tiempo.trim().length < 15) {
+    errors.push({ field: "disponibilidad_tiempo", message: "Describe tu disponibilidad de tiempo con al menos 15 caracteres" })
+  } else if (data.disponibilidad_tiempo.trim().length > 300) {
+    errors.push({ field: "disponibilidad_tiempo", message: "La disponibilidad de tiempo no puede exceder 300 caracteres" })
   }
 
+  // Validación de condiciones del hogar - más estricta
   if (!data.condiciones_hogar || data.condiciones_hogar.trim().length === 0) {
     errors.push({ field: "condiciones_hogar", message: "Las condiciones del hogar son obligatorias" })
+  } else if (data.condiciones_hogar.trim().length < 25) {
+    errors.push({ field: "condiciones_hogar", message: "Describe las condiciones del hogar con al menos 25 caracteres para evaluar adecuadamente" })
+  } else if (data.condiciones_hogar.trim().length > 500) {
+    errors.push({ field: "condiciones_hogar", message: "Las condiciones del hogar no pueden exceder 500 caracteres" })
   }
 
   return errors

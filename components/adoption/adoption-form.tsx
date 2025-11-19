@@ -220,7 +220,9 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
                 onChange={handleChange}
                 placeholder="12345678"
                 maxLength={8}
+                minLength={8}
                 pattern="\d{8}"
+                required
                 className={errors.dni ? "border-destructive" : ""}
                 disabled={isLoading}
               />
@@ -239,7 +241,9 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
                 onChange={handleChange}
                 placeholder="987654321"
                 maxLength={9}
+                minLength={9}
                 pattern="9\d{8}"
+                required
                 className={errors.telefono ? "border-destructive" : ""}
                 disabled={isLoading}
               />
@@ -256,7 +260,10 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
               name="distrito"
               value={formData.distrito}
               onChange={handleChange}
-              placeholder="Ej: Lima, San Isidro"
+              placeholder="Ej: Lima, San Isidro, Miraflores"
+              minLength={3}
+              maxLength={50}
+              required
               className={errors.distrito ? "border-destructive" : ""}
               disabled={isLoading}
             />
@@ -275,16 +282,26 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
             <Label htmlFor="motivacion">
               Motivación para Adoptar <span className="text-destructive">*</span>
             </Label>
+            <p className="text-sm text-muted-foreground">
+              Explícanos detalladamente por qué quieres adoptar a esta mascota (mínimo 20 caracteres)
+            </p>
             <Textarea
               id="motivacion"
               name="motivacion"
               value={formData.motivacion}
               onChange={handleChange}
-              placeholder="¿Por qué quieres adoptar a esta mascota? ¿Qué esperas de la adopción?"
-              rows={4}
+              placeholder="¿Por qué quieres adoptar a esta mascota? ¿Qué esperas de la adopción? ¿Has tenido mascotas antes? Cuéntanos tu historia..."
+              rows={5}
+              maxLength={500}
+              minLength={20}
+              required
               className={errors.motivacion ? "border-destructive" : ""}
               disabled={isLoading}
             />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{formData.motivacion.length}/500 caracteres</span>
+              <span>Mínimo 20 caracteres</span>
+            </div>
             {errors.motivacion && <p className="text-sm text-destructive">{errors.motivacion}</p>}
           </div>
 
@@ -292,16 +309,26 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
             <Label htmlFor="disponibilidad_tiempo">
               Disponibilidad de Tiempo <span className="text-destructive">*</span>
             </Label>
+            <p className="text-sm text-muted-foreground">
+              Describe tu horario y tiempo disponible para la mascota (mínimo 15 caracteres)
+            </p>
             <Textarea
               id="disponibilidad_tiempo"
               name="disponibilidad_tiempo"
               value={formData.disponibilidad_tiempo}
               onChange={handleChange}
-              placeholder="¿Cuánto tiempo puedes dedicarle a la mascota? ¿Trabajas desde casa o fuera?"
-              rows={3}
+              placeholder="¿Cuánto tiempo puedes dedicarle a la mascota? ¿Trabajas desde casa o fuera? ¿Cuáles son tus horarios de trabajo? ¿Tienes tiempo para paseos y cuidados?"
+              rows={4}
+              maxLength={300}
+              minLength={15}
+              required
               className={errors.disponibilidad_tiempo ? "border-destructive" : ""}
               disabled={isLoading}
             />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{formData.disponibilidad_tiempo.length}/300 caracteres</span>
+              <span>Mínimo 15 caracteres</span>
+            </div>
             {errors.disponibilidad_tiempo && <p className="text-sm text-destructive">{errors.disponibilidad_tiempo}</p>}
           </div>
 
@@ -309,16 +336,26 @@ export function AdoptionForm({ mascotaId }: AdoptionFormProps) {
             <Label htmlFor="condiciones_hogar">
               Condiciones del Hogar <span className="text-destructive">*</span>
             </Label>
+            <p className="text-sm text-muted-foreground">
+              Describe detalladamente tu hogar y el entorno donde vivirá la mascota (mínimo 25 caracteres)
+            </p>
             <Textarea
               id="condiciones_hogar"
               name="condiciones_hogar"
               value={formData.condiciones_hogar}
               onChange={handleChange}
-              placeholder="Describe tu hogar: ¿Casa o departamento? ¿Tienes jardín? ¿Vives solo o con familia? ¿Hay otras mascotas?"
-              rows={4}
+              placeholder="Describe tu hogar: ¿Casa o departamento? ¿Tienes jardín o patio? ¿Vives solo o con familia? ¿Hay otras mascotas? ¿Hay niños en casa? ¿Cuáles son las condiciones de espacio?"
+              rows={5}
+              maxLength={500}
+              minLength={25}
+              required
               className={errors.condiciones_hogar ? "border-destructive" : ""}
               disabled={isLoading}
             />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{formData.condiciones_hogar.length}/500 caracteres</span>
+              <span>Mínimo 25 caracteres</span>
+            </div>
             {errors.condiciones_hogar && <p className="text-sm text-destructive">{errors.condiciones_hogar}</p>}
           </div>
         </CardContent>

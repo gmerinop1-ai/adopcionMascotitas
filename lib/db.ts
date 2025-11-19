@@ -726,45 +726,61 @@ export async function getSolicitudesByAdoptante(adoptanteId: string) {
 // Función para actualizar estado de solicitud y manejar estado de mascota
 export async function updateSolicitudEstado(solicitudId: string, nuevoEstado: string, fechaEntrevista?: string) {
   try {
+    console.log(`[DB] === INICIO updateSolicitudEstado ===`)
     console.log(`[DB] Actualizando solicitud ${solicitudId} a estado: ${nuevoEstado}`)
+    console.log(`[DB] Fecha entrevista: ${fechaEntrevista}`)
     
     const clientToUse = supabaseAdmin || supabase
     const clientType = supabaseAdmin ? 'administrativo (service role)' : 'público'
+    console.log(`[DB] Usando cliente: ${clientType}`)
     
     // Primero obtener la solicitud para saber qué mascota es
     const { data: solicitud, error: fetchError } = await clientToUse
       .from('solicitud')
-      .select('mascota_id')
+      .select('mascota_id, estado')
       .eq('id', solicitudId)
       .single()
 
     if (fetchError || !solicitud) {
+      console.error('[DB] Error obteniendo solicitud:', fetchError)
       throw new Error('Solicitud no encontrada')
     }
 
+    console.log(`[DB] Solicitud encontrada - ID: ${solicitud.mascota_id}, Estado actual: ${solicitud.estado}`)
+
     // Actualizar la solicitud
-    const updateData: any = { estado: nuevoEstado }
+    const updateData: any = { 
+      estado: nuevoEstado,
+      updated_at: new Date().toISOString()
+    }
     if (fechaEntrevista) {
       updateData.fecha_entrevista = fechaEntrevista
     }
 
-    const { error: updateError } = await clientToUse
+    console.log(`[DB] Datos de actualización:`, updateData)
+
+    const { data: updateResult, error: updateError } = await clientToUse
       .from('solicitud')
       .update(updateData)
       .eq('id', solicitudId)
+      .select()
+      .single()
 
     if (updateError) {
+      console.error('[DB] Error en actualización:', updateError)
       throw new Error(`Error actualizando solicitud: ${updateError.message}`)
     }
+
+    console.log(`[DB] ✅ Solicitud actualizada exitosamente:`, updateResult)
 
     // Manejar el estado de la mascota según el estado de la solicitud
     let nuevoEstadoMascota = 'disponible' // Por defecto, volver a disponible
 
-    if (nuevoEstado === 'aprobado') {
+    if (nuevoEstado === 'aprobada') {
       nuevoEstadoMascota = 'adoptado'
-    } else if (nuevoEstado === 'pendiente') {
+    } else if (nuevoEstado === 'pendiente' || nuevoEstado === 'entrevista') {
       nuevoEstadoMascota = 'reservado'
-    } else if (nuevoEstado === 'rechazado' || nuevoEstado === 'cancelado') {
+    } else if (nuevoEstado === 'rechazada' || nuevoEstado === 'cancelada') {
       nuevoEstadoMascota = 'disponible'
     }
 
@@ -782,8 +798,15 @@ export async function updateSolicitudEstado(solicitudId: string, nuevoEstado: st
       console.log('[DB] ✅ Estado de mascota actualizado correctamente')
     }
 
-    return { success: true }
+    console.log('[DB] === FIN updateSolicitudEstado ===')
+    return { 
+      success: true, 
+      solicitud_id: solicitudId,
+      nuevo_estado: nuevoEstado,
+      fecha_entrevista: fechaEntrevista || null
+    }
   } catch (error) {
+    console.error('[DB] === ERROR en updateSolicitudEstado ===')
     console.error('[DB] updateSolicitudEstado failed:', error)
     throw error
   }
@@ -791,19 +814,21 @@ export async function updateSolicitudEstado(solicitudId: string, nuevoEstado: st
 
 export async function getEntrevistasProgramadas(startDate?: string, endDate?: string) {
   try {
-    let query = supabase
+    console.log('[DB] === INICIO getEntrevistasProgramadas ===')
+    console.log('[DB] Parámetros:', { startDate, endDate })
+    
+    const clientToUse = supabaseAdmin || supabase
+    const clientType = supabaseAdmin ? 'administrativo (service role)' : 'público'
+    console.log(`[DB] Usando cliente: ${clientType}`)
+
+    let query = clientToUse
       .from('solicitud')
       .select(`
         id,
         fecha_entrevista,
         telefono,
-        mascota:mascota_id!inner (
-          nombre
-        ),
-        adoptante:adoptante_id!inner (
-          nombres,
-          apellidos
-        )
+        mascota_id,
+        adoptante_id
       `)
       .eq('estado', 'entrevista')
       .not('fecha_entrevista', 'is', null)
@@ -815,25 +840,64 @@ export async function getEntrevistasProgramadas(startDate?: string, endDate?: st
       query = query.lte('fecha_entrevista', endDate)
     }
 
-    const { data, error } = await query.order('fecha_entrevista')
+    const { data: solicitudes, error } = await query.order('fecha_entrevista')
 
     if (error) {
-      console.error('Error getting entrevistas programadas:', error)
+      console.error('[DB] Error getting solicitudes con entrevista:', error)
       throw new Error(`Database error: ${error.message}`)
     }
 
-    return data?.map((item: any) => ({
-      id: item.id,
-      solicitud_id: item.id,
-      fecha_entrevista: item.fecha_entrevista,
-      estado: 'programada',
-      mascota_nombre: item.mascota?.nombre,
-      postulante_nombre: `${item.adoptante?.nombres} ${item.adoptante?.apellidos}`,
-      postulante_telefono: item.telefono,
-      observaciones: 'Entrevista programada'
-    })) || []
+    console.log(`[DB] Solicitudes con entrevista encontradas: ${solicitudes?.length || 0}`)
+
+    if (!solicitudes || solicitudes.length === 0) {
+      console.log('[DB] No hay entrevistas programadas')
+      return []
+    }
+
+    // Obtener información de mascotas
+    const mascotaIds = [...new Set(solicitudes.map(s => s.mascota_id))]
+    const { data: mascotas, error: mascotaError } = await clientToUse
+      .from('mascota')
+      .select('id, nombre')
+      .in('id', mascotaIds)
+
+    if (mascotaError) {
+      console.error('[DB] Error getting mascotas:', mascotaError)
+    }
+
+    // Obtener información de adoptantes
+    const adoptanteIds = [...new Set(solicitudes.map(s => s.adoptante_id))]
+    const { data: adoptantes, error: adoptanteError } = await clientToUse
+      .from('adoptante')
+      .select('id, nombres, apellidos')
+      .in('id', adoptanteIds)
+
+    if (adoptanteError) {
+      console.error('[DB] Error getting adoptantes:', adoptanteError)
+    }
+
+    // Mapear los resultados
+    const entrevistas = solicitudes.map((item: any) => {
+      const mascota = mascotas?.find(m => m.id === item.mascota_id)
+      const adoptante = adoptantes?.find(a => a.id === item.adoptante_id)
+      
+      return {
+        id: item.id,
+        solicitud_id: item.id,
+        fecha_entrevista: item.fecha_entrevista,
+        estado: 'programada',
+        mascota_nombre: mascota?.nombre || 'Mascota no encontrada',
+        postulante_nombre: adoptante ? `${adoptante.nombres} ${adoptante.apellidos}` : 'Adoptante no encontrado',
+        postulante_telefono: item.telefono || 'No disponible',
+        observaciones: 'Entrevista programada'
+      }
+    })
+
+    console.log(`[DB] ✅ Entrevistas mapeadas exitosamente: ${entrevistas.length}`)
+    return entrevistas
+    
   } catch (error) {
-    console.error('getEntrevistasProgramadas failed:', error)
+    console.error('[DB] getEntrevistasProgramadas failed:', error)
     throw error
   }
 }

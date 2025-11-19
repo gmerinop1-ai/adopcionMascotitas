@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { getMascotaById } from "@/lib/db"
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const params = await context.params
+    const { id } = params
     
     const mascota = await getMascotaById(id)
 

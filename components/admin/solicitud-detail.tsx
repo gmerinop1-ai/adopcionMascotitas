@@ -56,7 +56,7 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
   const [historial, setHistorial] = useState<HistorialEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [nuevoEstado, setNuevoEstado] = useState<EstadoSolicitud>("pre_filtro")
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoSolicitud>("pendiente")
   const [observaciones, setObservaciones] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
@@ -120,8 +120,8 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
-      case "pre_filtro":
-        return <Badge variant="secondary">Pre-Filtro</Badge>
+      case "pendiente":
+        return <Badge variant="secondary">Pendiente</Badge>
       case "entrevista":
         return <Badge className="bg-primary">Entrevista</Badge>
       case "aprobada":
@@ -166,7 +166,7 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <CardTitle className="text-2xl">Solicitud #{solicitud.id}</CardTitle>
+                <CardTitle className="text-xl">Solicitud #{solicitud.id}</CardTitle>
                 {getEstadoBadge(solicitud.estado)}
               </div>
               <p className="text-sm text-muted-foreground">
@@ -182,11 +182,11 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
         {/* Mascota Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Mascota</CardTitle>
+            <CardTitle className="text-lg">Mascota</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-4">
-              <div className="h-20 w-20 rounded-lg overflow-hidden bg-secondary">
+              <div className="h-16 w-16 rounded-lg overflow-hidden bg-secondary">
                 <img
                   src={solicitud.mascota_foto || "/placeholder.svg"}
                   alt={solicitud.mascota_nombre}
@@ -194,8 +194,8 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
                 />
               </div>
               <div>
-                <p className="text-xl font-bold">{solicitud.mascota_nombre}</p>
-                <Button asChild variant="link" className="h-auto p-0">
+                <p className="text-lg font-bold">{solicitud.mascota_nombre}</p>
+                <Button asChild variant="link" className="h-auto p-0 text-sm">
                   <Link href={`/mascotas/${solicitud.mascota_id}`}>Ver ficha completa</Link>
                 </Button>
               </div>
@@ -206,7 +206,7 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
         {/* Postulante Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Datos del Postulante</CardTitle>
+            <CardTitle className="text-lg">Datos del Postulante</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
@@ -227,7 +227,7 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{solicitud.distrito}</span>
+              <span>{solicitud.distrito_ciudad}</span>
             </div>
           </CardContent>
         </Card>
@@ -236,22 +236,36 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
       {/* Respuestas del Formulario */}
       <Card>
         <CardHeader>
-          <CardTitle>Respuestas del Formulario</CardTitle>
+          <CardTitle className="text-lg">Respuestas del Formulario</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div>
-            <Label className="text-base font-semibold">Motivación para Adoptar</Label>
-            <p className="text-muted-foreground mt-1 leading-relaxed">{solicitud.motivacion}</p>
+            <Label className="text-base font-semibold text-primary">Motivación para Adoptar</Label>
+            <div className="mt-2 p-3 bg-muted rounded-md">
+              <p className="text-sm leading-relaxed">{solicitud.razon}</p>
+            </div>
           </div>
 
           <div>
-            <Label className="text-base font-semibold">Disponibilidad de Tiempo</Label>
-            <p className="text-muted-foreground mt-1 leading-relaxed">{solicitud.disponibilidad_tiempo}</p>
+            <Label className="text-base font-semibold text-primary">Disponibilidad de Tiempo</Label>
+            <div className="mt-2 p-3 bg-muted rounded-md">
+              <p className="text-sm leading-relaxed">
+                {solicitud.condicion_hogar && solicitud.condicion_hogar.includes('DISPONIBILIDAD:') 
+                  ? solicitud.condicion_hogar.split('||DISPONIBILIDAD: ')[1] || 'No especificado'
+                  : 'No especificado'}
+              </p>
+            </div>
           </div>
 
           <div>
-            <Label className="text-base font-semibold">Condiciones del Hogar</Label>
-            <p className="text-muted-foreground mt-1 leading-relaxed">{solicitud.condiciones_hogar}</p>
+            <Label className="text-base font-semibold text-primary">Condiciones del Hogar</Label>
+            <div className="mt-2 p-3 bg-muted rounded-md">
+              <p className="text-sm leading-relaxed">
+                {solicitud.condicion_hogar && solicitud.condicion_hogar.includes('||DISPONIBILIDAD:') 
+                  ? solicitud.condicion_hogar.split('||DISPONIBILIDAD:')[0]
+                  : solicitud.condicion_hogar}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -259,11 +273,11 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
       {/* Gestión de Estado */}
       <Card>
         <CardHeader>
-          <CardTitle>Gestión de Estado</CardTitle>
+          <CardTitle className="text-lg">Gestión de Estado</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {successMessage && (
-            <Alert className="bg-accent/10 text-accent-foreground border-accent">
+            <Alert className="bg-green-50 text-green-800 border-green-200">
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           )}
@@ -276,7 +290,7 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
           )}
 
           {!canChangeState && (
-            <Alert>
+            <Alert className="bg-blue-50 text-blue-800 border-blue-200">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Esta solicitud está en un estado final y no puede ser modificada. Los estados finales son: Aprobada,
@@ -285,44 +299,46 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="estado">Cambiar Estado</Label>
-            <Select value={nuevoEstado} onValueChange={(value) => setNuevoEstado(value as EstadoSolicitud)}>
-              <SelectTrigger id="estado" disabled={!canChangeState}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={solicitud.estado} disabled>
-                  {getEstadoLabel(solicitud.estado)} (Actual)
-                </SelectItem>
-                {validNextStates.map((estado) => (
-                  <SelectItem key={estado} value={estado}>
-                    {getEstadoLabel(estado)}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="estado">Cambiar Estado</Label>
+              <Select value={nuevoEstado} onValueChange={(value) => setNuevoEstado(value as EstadoSolicitud)}>
+                <SelectTrigger id="estado" disabled={!canChangeState}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={solicitud.estado} disabled>
+                    {getEstadoLabel(solicitud.estado)} (Actual)
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {canChangeState && (
-              <p className="text-xs text-muted-foreground">
-                Estados válidos desde {getEstadoLabel(solicitud.estado)}:{" "}
-                {validNextStates.map(getEstadoLabel).join(", ")}
-              </p>
-            )}
+                  {validNextStates.map((estado) => (
+                    <SelectItem key={estado} value={estado}>
+                      {getEstadoLabel(estado)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {canChangeState && (
+                <p className="text-xs text-muted-foreground">
+                  Estados válidos desde {getEstadoLabel(solicitud.estado)}:{" "}
+                  {validNextStates.map(getEstadoLabel).join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="observaciones">Observaciones Internas</Label>
+              <Textarea
+                id="observaciones"
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+                placeholder="Notas internas sobre esta solicitud..."
+                rows={3}
+                disabled={!canChangeState}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="observaciones">Observaciones Internas</Label>
-            <Textarea
-              id="observaciones"
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Notas internas sobre esta solicitud..."
-              rows={4}
-              disabled={!canChangeState}
-            />
-          </div>
-
-          <Button onClick={handleUpdateEstado} disabled={isUpdating || !canChangeState}>
+          <Button onClick={handleUpdateEstado} disabled={isUpdating || !canChangeState} className="w-full md:w-auto">
             {isUpdating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
