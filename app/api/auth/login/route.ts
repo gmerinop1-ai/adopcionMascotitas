@@ -59,19 +59,31 @@ export async function POST(request: Request) {
     }
 
     if (roleData?.nombre === 'adoptante') {
-      const { data: adoptanteData } = await supabase
+      console.log('[LOGIN] Buscando datos de adoptante para usuario_id:', user.usuario_id)
+      
+      const { data: adoptanteData, error: adoptanteError } = await supabase
         .from('adoptante')
-        .select('nombres, apellidos, nro_dni')
+        .select('id, nombres, apellidos, nro_dni')
         .eq('usuario_id', user.usuario_id)
         .single()
+
+      if (adoptanteError) {
+        console.error('[LOGIN] Error obteniendo datos de adoptante:', adoptanteError)
+      }
+
+      console.log('[LOGIN] Datos de adoptante obtenidos:', adoptanteData)
 
       if (adoptanteData) {
         userData = {
           ...userData,
+          adoptante_id: adoptanteData.id,
           nombres: adoptanteData.nombres,
           apellidos: adoptanteData.apellidos,
           nro_dni: adoptanteData.nro_dni
         }
+        console.log('[LOGIN] userData final con adoptante_id:', userData)
+      } else {
+        console.error('[LOGIN] No se encontraron datos de adoptante para usuario_id:', user.usuario_id)
       }
     }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { PawPrint, LayoutDashboard, PlusCircle, FileText, LogOut } from "lucide-react"
+import { PawPrint, LayoutDashboard, PlusCircle, FileText, Calendar, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -38,6 +38,12 @@ export function AdminNav() {
                 <Link href="/admin/solicitudes">
                   <FileText className="mr-2 h-4 w-4" />
                   Solicitudes
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/admin/calendario">
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Calendario
                 </Link>
               </Button>
             </div>

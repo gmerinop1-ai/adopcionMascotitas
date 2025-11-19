@@ -119,10 +119,20 @@ export function validateSolicitudForm(data: {
 
   if (!data.dni || data.dni.trim().length === 0) {
     errors.push({ field: "dni", message: "El DNI es obligatorio" })
+  } else {
+    const dniRegex = /^\d{8}$/
+    if (!dniRegex.test(data.dni.trim())) {
+      errors.push({ field: "dni", message: "El DNI debe tener exactamente 8 dígitos" })
+    }
   }
 
   if (!data.telefono || data.telefono.trim().length === 0) {
     errors.push({ field: "telefono", message: "El teléfono es obligatorio" })
+  } else {
+    const telefonoRegex = /^9\d{8}$/
+    if (!telefonoRegex.test(data.telefono.trim())) {
+      errors.push({ field: "telefono", message: "El teléfono debe tener 9 dígitos y empezar con 9" })
+    }
   }
 
   if (!data.distrito || data.distrito.trim().length === 0) {

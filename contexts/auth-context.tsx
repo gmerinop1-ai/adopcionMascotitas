@@ -7,6 +7,7 @@ export interface User {
   usuario_id: number
   correo: string
   rol: string
+  adoptante_id?: string
   nombres?: string
   apellidos?: string
   nro_dni?: string

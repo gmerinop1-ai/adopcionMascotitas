@@ -1,57 +1,52 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
+import { getSolicitudesByAdoptante } from "@/lib/db"
 
-// Mock data
-const mockSolicitudes = [
-  {
-    id: 1,
-    usuario_id: 1,
-    mascota_id: 1,
-    mascota_nombre: "Luna",
-    mascota_foto: "/friendly-labrador-dog.jpg",
-    dni: "12345678",
-    telefono: "987654321",
-    distrito: "Lima, San Isidro",
-    motivacion: "Quiero adoptar a Luna porque...",
-    disponibilidad_tiempo: "Trabajo desde casa...",
-    condiciones_hogar: "Vivo en una casa con jardín...",
-    estado: "entrevista",
-    created_at: new Date("2024-01-15"),
-    updated_at: new Date("2024-01-20"),
-  },
-  {
-    id: 2,
-    usuario_id: 1,
-    mascota_id: 2,
-    mascota_nombre: "Max",
-    mascota_foto: "/siamese-cat.png",
-    dni: "12345678",
-    telefono: "987654321",
-    distrito: "Lima, Miraflores",
-    motivacion: "Me encantan los gatos...",
-    disponibilidad_tiempo: "Tengo tiempo completo...",
-    condiciones_hogar: "Departamento amplio...",
-    estado: "pre_filtro",
-    created_at: new Date("2024-01-25"),
-    updated_at: new Date("2024-01-25"),
-  },
-]
-
-export async function GET() {
+export async function POST(request: Request) {
   try {
-    // TODO: Get user ID from session and fetch their solicitudes
-    // const session = await getSession()
-    // const solicitudes = await query(
-    //   `SELECT s.*, m.nombre as mascota_nombre, m.foto_url as mascota_foto
-    //    FROM solicitudes_adopcion s
-    //    JOIN mascotas m ON s.mascota_id = m.id
-    //    WHERE s.usuario_id = $1
-    //    ORDER BY s.created_at DESC`,
-    //   [session.user.id]
-    // )
+    const body = await request.json()
+    const { user } = body
 
-    return NextResponse.json({ solicitudes: mockSolicitudes })
+    console.log("[API] User data in mis-procesos:", {
+      usuario_id: user?.usuario_id,
+      adoptante_id: user?.adoptante_id,
+      correo: user?.correo
+    })
+
+    if (!user || !user.adoptante_id) {
+      console.log("[API] Error: Usuario no autenticado o sin adoptante_id")
+      return NextResponse.json({ 
+        error: "Usuario no autenticado o sin perfil de adoptante" 
+      }, { status: 401 })
+    }
+
+    console.log("[API] Obteniendo solicitudes desde la base de datos...")
+    const solicitudes = await getSolicitudesByAdoptante(user.adoptante_id)
+    
+    console.log("[API] Solicitudes del usuario desde DB:", {
+      total: solicitudes.length,
+      solicitudes_ids: solicitudes.map(s => s.id)
+    })
+
+    return NextResponse.json({ 
+      solicitudes
+    })
   } catch (error) {
-    console.error("[v0] Error fetching solicitudes:", error)
-    return NextResponse.json({ error: "Error al obtener solicitudes" }, { status: 500 })
+    console.error("[API] Error fetching solicitudes:", error)
+    
+    // Manejo específico de errores de RLS
+    if (error instanceof Error) {
+      if (error.message.includes('Row Level Security') || 
+          error.message.includes('permission denied') ||
+          error.message.includes('policy')) {
+        return NextResponse.json({ 
+          error: "Error de permisos. Verifica que tengas acceso a tus solicitudes." 
+        }, { status: 403 })
+      }
+    }
+    
+    return NextResponse.json({ 
+      error: "Error al obtener solicitudes",
+      details: error instanceof Error ? error.message : "Error desconocido"
+    }, { status: 500 })
   }
 }
