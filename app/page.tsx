@@ -2,10 +2,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Heart, PawPrint, Users, Shield } from "lucide-react"
+import { PublicNav } from "@/components/public/public-nav"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen">
+      <PublicNav />
+      
       {/* Hero Section */}
       <section className="relative bg-gradient-to-b from-secondary/30 to-background py-20 px-4">
         <div className="container mx-auto max-w-6xl text-center">

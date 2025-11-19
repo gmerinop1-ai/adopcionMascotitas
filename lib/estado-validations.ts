@@ -1,6 +1,6 @@
 // Estado transition validations
 
-export type EstadoSolicitud = "pre_filtro" | "entrevista" | "aprobada" | "rechazada" | "cancelada"
+export type EstadoSolicitud = "pendiente" | "entrevista" | "aprobada" | "rechazada" | "cancelada"
 
 export interface TransitionRule {
   from: EstadoSolicitud
@@ -10,7 +10,7 @@ export interface TransitionRule {
 // Define valid state transitions
 const transitionRules: TransitionRule[] = [
   {
-    from: "pre_filtro",
+    from: "pendiente",
     to: ["entrevista", "rechazada", "cancelada"],
   },
   {
@@ -66,7 +66,7 @@ export function getTransitionError(from: EstadoSolicitud, to: EstadoSolicitud): 
 
 export function getEstadoLabel(estado: EstadoSolicitud): string {
   const labels: Record<EstadoSolicitud, string> = {
-    pre_filtro: "Pre-Filtro",
+    pendiente: "Pendiente",
     entrevista: "Entrevista",
     aprobada: "Aprobada",
     rechazada: "Rechazada",
@@ -77,7 +77,7 @@ export function getEstadoLabel(estado: EstadoSolicitud): string {
 
 export function getEstadoDescription(estado: EstadoSolicitud): string {
   const descriptions: Record<EstadoSolicitud, string> = {
-    pre_filtro: "La solicitud está siendo revisada inicialmente",
+    pendiente: "La solicitud está siendo revisada inicialmente",
     entrevista: "El postulante ha pasado el pre-filtro y se coordinará una entrevista",
     aprobada: "La solicitud ha sido aprobada y el postulante puede adoptar",
     rechazada: "La solicitud no cumple con los requisitos necesarios",

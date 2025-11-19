@@ -37,6 +37,7 @@ export function CalendarioEntrevistas() {
 
   const fetchEntrevistas = async () => {
     try {
+      setIsLoading(true)
       const startOfMonth = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1)
       const endOfMonth = new Date(fechaActual.getFullYear(), fechaActual.getMonth() + 1, 0)
       
@@ -45,11 +46,40 @@ export function CalendarioEntrevistas() {
         end: endOfMonth.toISOString()
       })
 
+      console.log('[CALENDAR] Fetching entrevistas for:', {
+        start: startOfMonth.toISOString(),
+        end: endOfMonth.toISOString()
+      })
+
       const response = await fetch(`/api/admin/entrevistas?${params}`)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[CALENDAR] Response not ok:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        })
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
-      setEntrevistas(data.entrevistas || [])
+      console.log('[CALENDAR] Response data:', data)
+      
+      // Asegurarse de que siempre tengamos un array
+      const entrevistasData = Array.isArray(data.entrevistas) ? data.entrevistas : []
+      console.log('[CALENDAR] Entrevistas obtenidas:', entrevistasData.length)
+      
+      setEntrevistas(entrevistasData)
     } catch (error) {
-      console.error("[v0] Error fetching entrevistas:", error)
+      console.error("[CALENDAR] Error fetching entrevistas:", error)
+      // En caso de error, establecer array vacío para evitar crashes
+      setEntrevistas([])
+      
+      // Mostrar el error al usuario si es necesario
+      if (error instanceof Error) {
+        console.error('[CALENDAR] Error details:', error.message)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -242,8 +272,10 @@ export function CalendarioEntrevistas() {
           </CardHeader>
           <CardContent>
             {entrevistas.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay entrevistas programadas para este mes
+              <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">No hay entrevistas programadas</p>
+                <p>Para este mes no hay entrevistas agendadas. Las entrevistas aparecerán aquí cuando se programen desde la gestión de solicitudes.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -365,7 +397,13 @@ export function CalendarioEntrevistas() {
                 >
                   Cerrar
                 </Button>
-                <Button className="flex-1">
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    // Redirigir al administrador para ver la solicitud completa
+                    window.open(`/admin/solicitudes?highlight=${selectedEntrevista.solicitud_id}`, '_blank')
+                  }}
+                >
                   Ver Solicitud Completa
                 </Button>
               </div>

@@ -3,6 +3,8 @@ import { getEntrevistasProgramadas } from "@/lib/db"
 
 export async function GET(request: Request) {
   try {
+    console.log('[API] === INICIO GET entrevistas ===')
+    
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start')
     const endDate = searchParams.get('end')
@@ -13,20 +15,32 @@ export async function GET(request: Request) {
     //   return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     // }
 
-    console.log("[DEBUG] API Entrevistas - Request params:", { startDate, endDate })
+    console.log("[API] Entrevistas - Request params:", { startDate, endDate })
 
     // Obtener entrevistas desde la base de datos real
     const entrevistas = await getEntrevistasProgramadas(startDate || undefined, endDate || undefined)
 
-    console.log("[DEBUG] API Entrevistas - Entrevistas obtenidas desde DB:", entrevistas)
+    console.log("[API] Entrevistas - Entrevistas obtenidas desde DB:", entrevistas?.length || 0)
 
     return NextResponse.json({ 
-      entrevistas,
-      total: entrevistas.length 
+      entrevistas: entrevistas || [],
+      total: entrevistas?.length || 0
     })
   } catch (error) {
-    console.error("[v0] Error fetching entrevistas:", error)
-    return NextResponse.json({ error: "Error al obtener entrevistas" }, { status: 500 })
+    console.error("[API] Error fetching entrevistas:", error)
+    
+    // Retornar más información sobre el error para debugging
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    const errorDetails = error instanceof Error ? error.stack : 'No hay stack trace disponible'
+    
+    console.error("[API] Error details:", { errorMessage, errorDetails })
+    
+    return NextResponse.json({ 
+      error: "Error al obtener entrevistas",
+      details: errorMessage,
+      entrevistas: [], // Siempre retornar un array vacío como fallback
+      total: 0
+    }, { status: 500 })
   }
 }
 
