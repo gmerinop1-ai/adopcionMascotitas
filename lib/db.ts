@@ -101,6 +101,27 @@ export interface Entrevista {
   updated_at: string
 }
 
+export interface FranjaHoraria {
+  id: string
+  fecha: string
+  hora_inicio: string
+  duracion_minutos: number
+  cupo_maximo: number
+  cupo_disponible: number
+  estado: 'borrador' | 'publicado' | 'completado'
+  created_at: string
+  updated_at: string
+}
+
+export interface ReservaFranja {
+  id: string
+  franja_horaria_id: string
+  solicitud_id: string
+  estado: 'reservado' | 'completado' | 'cancelado'
+  created_at: string
+  updated_at: string
+}
+
 // Database helper functions with better error handling
 export async function insertUsuario(data: {
   correo: string
@@ -531,9 +552,9 @@ export async function getAllSolicitudesAdmin() {
   try {
     console.log('[DB] Obteniendo todas las solicitudes para admin...')
     
-    // Usar cliente administrativo para operaciones de admin
-    const client = supabaseAdmin || supabase
-    console.log('[DB] Usando cliente:', supabaseAdmin ? 'administrativo' : 'público')
+    // Usar siempre el cliente público por ahora para testing
+    const client = supabase
+    console.log('[DB] Usando cliente: público (testing mode)')
     
     const { data, error } = await client
       .from('solicitud')
@@ -570,6 +591,7 @@ export async function getAllSolicitudesAdmin() {
     // Transform data for frontend
     return data?.map(solicitud => ({
       id: solicitud.id,
+      adoptante_id: solicitud.adoptante_id, // ✅ Agregar adoptante_id
       fecha: solicitud.created_at,
       mascota_nombre: solicitud.mascota?.nombre,
       mascota_id: solicitud.mascota_id,
@@ -680,9 +702,9 @@ export async function getSolicitudesByAdoptante(adoptanteId: string) {
   try {
     console.log('[DB] Obteniendo solicitudes del adoptante:', adoptanteId)
     
-    // Usar cliente administrativo para bypasear RLS
-    const client = supabaseAdmin || supabase
-    console.log('[DB] Usando cliente:', supabaseAdmin ? 'administrativo' : 'público')
+    // Usar siempre el cliente público por ahora para testing
+    const client = supabase
+    console.log('[DB] Usando cliente: público (testing mode)')
     
     const { data, error } = await client
       .from('solicitud')
@@ -698,10 +720,21 @@ export async function getSolicitudesByAdoptante(adoptanteId: string) {
 
     if (error) {
       console.error('[DB] Error getting solicitudes by adoptante:', error)
+      console.error('[DB] Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
       throw new Error(`Database error: ${error.message}`)
     }
 
     console.log('[DB] Solicitudes encontradas:', data?.length || 0)
+    console.log('[DB] Primera solicitud (si existe):', data?.[0] ? {
+      id: data[0].id,
+      estado: data[0].estado,
+      fecha_entrevista: data[0].fecha_entrevista
+    } : 'Ninguna')
 
     return data?.map(solicitud => ({
       id: solicitud.id,
@@ -898,6 +931,320 @@ export async function getEntrevistasProgramadas(startDate?: string, endDate?: st
     
   } catch (error) {
     console.error('[DB] getEntrevistasProgramadas failed:', error)
+    throw error
+  }
+}
+
+// === FUNCIONES PARA FRANJAS HORARIAS ===
+
+export async function insertFranjaHoraria(data: {
+  fecha: string
+  hora_inicio: string
+  duracion_minutos: number
+  cupo_maximo?: number
+}) {
+  try {
+    console.log('[DB] === INICIO insertFranjaHoraria ===')
+    console.log('[DB] Datos recibidos:', JSON.stringify(data, null, 2))
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    const insertData = {
+      fecha: data.fecha,
+      hora_inicio: data.hora_inicio,
+      duracion_minutos: data.duracion_minutos,
+      cupo_maximo: data.cupo_maximo || 1,
+      cupo_disponible: data.cupo_maximo || 1,
+      estado: 'borrador' as const
+    }
+
+    console.log('[DB] Datos preparados para inserción:', JSON.stringify(insertData, null, 2))
+    
+    // Intentar insertar sin el array wrapper
+    const { data: result, error } = await clientToUse
+      .from('franja_horaria')
+      .insert(insertData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error(`[DB] Error en inserción:`, error)
+      console.error(`[DB] Error code:`, error.code)
+      console.error(`[DB] Error details:`, error.details)
+      console.error(`[DB] Error hint:`, error.hint)
+      console.error(`[DB] Error message:`, error.message)
+      throw new Error(`Error de base de datos: ${error.message} (código: ${error.code})`)
+    }
+    
+    console.log(`[DB] ✅ Franja horaria insertada exitosamente:`, result)
+    return result
+    
+  } catch (error) {
+    console.error('[DB] === ERROR en insertFranjaHoraria ===')
+    console.error('[DB] Error completo:', error)
+    console.error('[DB] Error stack:', error instanceof Error ? error.stack : 'No stack available')
+    throw error
+  }
+}
+
+export async function getFranjasHorarias(estado?: 'borrador' | 'publicado' | 'completado') {
+  try {
+    console.log('[DB] === INICIO getFranjasHorarias ===')
+    console.log('[DB] Estado filtro:', estado)
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    let query = clientToUse
+      .from('franja_horaria')
+      .select('*')
+      .order('fecha', { ascending: true })
+      .order('hora_inicio', { ascending: true })
+
+    if (estado) {
+      query = query.eq('estado', estado)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('[DB] Error getting franjas horarias:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    console.log(`[DB] ✅ Franjas horarias obtenidas: ${data?.length || 0}`)
+    return data || []
+    
+  } catch (error) {
+    console.error('[DB] getFranjasHorarias failed:', error)
+    throw error
+  }
+}
+
+export async function deleteFranjaHoraria(id: string) {
+  try {
+    console.log('[DB] === INICIO deleteFranjaHoraria ===')
+    console.log('[DB] ID franja a eliminar:', id)
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    const { error } = await clientToUse
+      .from('franja_horaria')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('[DB] Error deleting franja horaria:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log('[DB] ✅ Franja horaria eliminada exitosamente')
+    return { success: true }
+    
+  } catch (error) {
+    console.error('[DB] deleteFranjaHoraria failed:', error)
+    throw error
+  }
+}
+
+export async function publicarFranjasHorarias(ids: string[]) {
+  try {
+    console.log('[DB] === INICIO publicarFranjasHorarias ===')
+    console.log('[DB] IDs a publicar:', ids)
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    // Verificar traslapes antes de publicar
+    const { data: franjasExistentes, error: fetchError } = await clientToUse
+      .from('franja_horaria')
+      .select('fecha, hora_inicio, duracion_minutos')
+      .eq('estado', 'publicado')
+
+    if (fetchError) {
+      console.error('[DB] Error fetching franjas existentes:', fetchError)
+      throw new Error(`Database error: ${fetchError.message}`)
+    }
+
+    // Obtener las franjas que se van a publicar
+    const { data: franjasAPublicar, error: fetchNewError } = await clientToUse
+      .from('franja_horaria')
+      .select('fecha, hora_inicio, duracion_minutos')
+      .in('id', ids)
+
+    if (fetchNewError) {
+      console.error('[DB] Error fetching franjas a publicar:', fetchNewError)
+      throw new Error(`Database error: ${fetchNewError.message}`)
+    }
+
+    // Validar traslapes
+    const todasLasFranjas = [...(franjasExistentes || []), ...(franjasAPublicar || [])]
+    const traslapes = validarTraslapesHorarios(todasLasFranjas)
+    
+    if (traslapes.length > 0) {
+      throw new Error(`Se detectaron traslapes de horarios: ${traslapes.join(', ')}`)
+    }
+
+    // Si no hay traslapes, publicar las franjas
+    const { data: result, error } = await clientToUse
+      .from('franja_horaria')
+      .update({ estado: 'publicado' })
+      .in('id', ids)
+      .select()
+
+    if (error) {
+      console.error('[DB] Error publishing franjas:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Franjas horarias publicadas exitosamente: ${result?.length || 0}`)
+    return result || []
+    
+  } catch (error) {
+    console.error('[DB] publicarFranjasHorarias failed:', error)
+    throw error
+  }
+}
+
+// Función auxiliar para validar traslapes
+function validarTraslapesHorarios(franjas: any[]): string[] {
+  const traslapes: string[] = []
+  
+  for (let i = 0; i < franjas.length; i++) {
+    for (let j = i + 1; j < franjas.length; j++) {
+      const franja1 = franjas[i]
+      const franja2 = franjas[j]
+      
+      // Solo comparar si son del mismo día
+      if (franja1.fecha !== franja2.fecha) continue
+      
+      const inicio1 = new Date(`${franja1.fecha}T${franja1.hora_inicio}`)
+      const fin1 = new Date(inicio1.getTime() + franja1.duracion_minutos * 60000)
+      
+      const inicio2 = new Date(`${franja2.fecha}T${franja2.hora_inicio}`)
+      const fin2 = new Date(inicio2.getTime() + franja2.duracion_minutos * 60000)
+      
+      // Verificar si hay traslape
+      if (inicio1 < fin2 && inicio2 < fin1) {
+        traslapes.push(`${franja1.fecha} ${franja1.hora_inicio} - ${franja2.hora_inicio}`)
+      }
+    }
+  }
+  
+  return traslapes
+}
+
+export async function getFranjasPublicadasParaUsuario() {
+  try {
+    console.log('[DB] === INICIO getFranjasPublicadasParaUsuario ===')
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    // Solo franjas publicadas y con cupos disponibles
+    const { data, error } = await clientToUse
+      .from('franja_horaria')
+      .select('*')
+      .eq('estado', 'publicado')
+      .gt('cupo_disponible', 0)
+      .gte('fecha', new Date().toISOString().split('T')[0]) // Solo fechas futuras
+      .order('fecha', { ascending: true })
+      .order('hora_inicio', { ascending: true })
+
+    if (error) {
+      console.error('[DB] Error getting franjas para usuario:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    console.log(`[DB] ✅ Franjas disponibles para usuario: ${data?.length || 0}`)
+    return data || []
+    
+  } catch (error) {
+    console.error('[DB] getFranjasPublicadasParaUsuario failed:', error)
+    throw error
+  }
+}
+
+export async function reservarFranjaHoraria(franjaId: string, solicitudId: string) {
+  try {
+    console.log('[DB] === INICIO reservarFranjaHoraria ===')
+    console.log('[DB] Reservando franja:', franjaId, 'para solicitud:', solicitudId)
+    
+    // Usar siempre el cliente público por ahora para testing
+    const clientToUse = supabase
+    console.log(`[DB] Usando cliente: público (testing mode)`)
+
+    // Verificar que la franja esté disponible
+    const { data: franja, error: franjaError } = await clientToUse
+      .from('franja_horaria')
+      .select('*')
+      .eq('id', franjaId)
+      .eq('estado', 'publicado')
+      .gt('cupo_disponible', 0)
+      .single()
+
+    if (franjaError || !franja) {
+      throw new Error('La franja horaria no está disponible o no existe')
+    }
+
+    console.log('[DB] Franja encontrada:', franja)
+
+    // Crear la reserva
+    const { data: reserva, error: reservaError } = await clientToUse
+      .from('reserva_franja')
+      .insert([{
+        franja_horaria_id: franjaId,
+        solicitud_id: solicitudId,
+        estado: 'reservado'
+      }])
+      .select()
+      .single()
+
+    if (reservaError) {
+      console.error('[DB] Error creating reserva:', reservaError)
+      throw new Error(`Error creando reserva: ${reservaError.message}`)
+    }
+
+    console.log('[DB] Reserva creada:', reserva)
+
+    // Decrementar cupo disponible
+    const { data: franjaActualizada, error: updateError } = await clientToUse
+      .from('franja_horaria')
+      .update({ 
+        cupo_disponible: franja.cupo_disponible - 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', franjaId)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('[DB] Error updating franja cupo:', updateError)
+      // Intentar limpiar la reserva creada
+      await clientToUse
+        .from('reserva_franja')
+        .delete()
+        .eq('id', reserva.id)
+      
+      throw new Error(`Error actualizando cupo: ${updateError.message}`)
+    }
+
+    console.log('[DB] ✅ Franja horaria reservada exitosamente')
+    return {
+      reserva,
+      franjaActualizada,
+      fechaEntrevista: `${franja.fecha}T${franja.hora_inicio}`
+    }
+    
+  } catch (error) {
+    console.error('[DB] reservarFranjaHoraria failed:', error)
     throw error
   }
 }

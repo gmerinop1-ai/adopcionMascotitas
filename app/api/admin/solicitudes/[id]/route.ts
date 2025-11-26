@@ -79,9 +79,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Estado es requerido" }, { status: 400 })
     }
 
-    if (estado === 'entrevista' && !fecha_entrevista) {
-      console.log("[API] Fecha de entrevista requerida para estado entrevista")
-      return NextResponse.json({ error: "Fecha de entrevista requerida para programar entrevista" }, { status: 400 })
+    // Permitir estado entrevista sin fecha para que el usuario pueda seleccionar después
+    // Solo validar fecha cuando se proporciona
+    if (estado === 'entrevista' && fecha_entrevista && !fecha_entrevista.trim()) {
+      console.log("[API] Si se proporciona fecha de entrevista, no puede estar vacía")
+      return NextResponse.json({ error: "Si se proporciona fecha de entrevista, debe ser válida" }, { status: 400 })
     }
 
     // Validar formato de fecha
