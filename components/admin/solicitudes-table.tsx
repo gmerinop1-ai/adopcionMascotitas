@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Eye, Calendar, Clock, Phone, MapPin, CheckCircle, AlertCircle } from "lucide-react"
-import { SolicitudDetail } from "./solicitud-detail"
+import { Loader2, Eye, Calendar, Clock, Phone, MapPin, CheckCircle, AlertCircle, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 interface SolicitudWithDetails {
   id: string
@@ -34,7 +34,6 @@ export function SolicitudesTable() {
   const [solicitudes, setSolicitudes] = useState<SolicitudWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("todas")
-  const [selectedSolicitud, setSelectedSolicitud] = useState<string | null>(null)
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const [scheduleForm, setScheduleForm] = useState({
     solicitud_id: "",
@@ -348,18 +347,22 @@ export function SolicitudesTable() {
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
+                            asChild
                             size="sm"
                             variant="outline"
-                            onClick={() => setSelectedSolicitud(solicitud.id)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Link href={`/admin/solicitudes/${solicitud.id}`}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Detalles
+                            </Link>
                           </Button>
                           {solicitud.estado === "pendiente" && (
                             <Button
                               size="sm"
                               onClick={() => handleScheduleInterview(solicitud.id)}
                             >
-                              <Clock className="h-4 w-4" />
+                              <Clock className="h-4 w-4 mr-1" />
+                              Programar
                             </Button>
                           )}
                         </div>
@@ -425,23 +428,6 @@ export function SolicitudesTable() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog para detalles de solicitud */}
-      {selectedSolicitud && (
-        <Dialog open={!!selectedSolicitud} onOpenChange={() => setSelectedSolicitud(null)}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Detalles de Solicitud</DialogTitle>
-              <DialogDescription>
-                Información completa de la solicitud de adopción
-              </DialogDescription>
-            </DialogHeader>
-            <SolicitudDetail 
-              solicitudId={selectedSolicitud} 
-            />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   )
 }

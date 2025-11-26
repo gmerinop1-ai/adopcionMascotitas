@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, User, Phone, Mail, MapPin, FileText, Clock, AlertCircle } from "lucide-react"
+import { Loader2, User, Phone, Mail, MapPin, FileText, Clock, AlertCircle, Eye } from "lucide-react"
 import Link from "next/link"
 import {
   isValidTransition,
@@ -160,19 +160,35 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header con navegación mejorada */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
-            <div>
+            <div className="space-y-1">
               <div className="flex items-center gap-3 mb-2">
-                <CardTitle className="text-xl">Solicitud #{solicitud.id}</CardTitle>
+                <CardTitle className="text-2xl">Solicitud de Adopción #{solicitud.id}</CardTitle>
                 {getEstadoBadge(solicitud.estado)}
               </div>
               <p className="text-sm text-muted-foreground">
-                Creada el {new Date(solicitud.created_at).toLocaleDateString("es-ES")} •{" "}
-                {new Date(solicitud.created_at).toLocaleTimeString("es-ES")}
+                Creada el {new Date(solicitud.created_at).toLocaleDateString("es-ES", {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })} a las {new Date(solicitud.created_at).toLocaleTimeString("es-ES", {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
               </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Última actualización: {new Date(solicitud.updated_at).toLocaleDateString("es-ES")} • {new Date(solicitud.updated_at).toLocaleTimeString("es-ES")}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium">ID de Referencia</div>
+              <div className="text-xs text-muted-foreground font-mono">
+                SOL-{solicitud.id.toString().padStart(6, '0')}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -182,21 +198,28 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
         {/* Mascota Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Mascota</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <span>🐕</span>
+              Mascota Solicitada
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-16 w-16 rounded-lg overflow-hidden bg-secondary">
+            <div className="flex items-center gap-6">
+              <div className="h-20 w-20 rounded-xl overflow-hidden bg-secondary ring-2 ring-primary/10">
                 <img
                   src={solicitud.mascota_foto || "/placeholder.svg"}
                   alt={solicitud.mascota_nombre}
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div>
-                <p className="text-lg font-bold">{solicitud.mascota_nombre}</p>
-                <Button asChild variant="link" className="h-auto p-0 text-sm">
-                  <Link href={`/mascotas/${solicitud.mascota_id}`}>Ver ficha completa</Link>
+              <div className="flex-1">
+                <p className="text-xl font-bold text-primary mb-1">{solicitud.mascota_nombre}</p>
+                <p className="text-sm text-muted-foreground mb-3">ID: {solicitud.mascota_id}</p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/mascotas/${solicitud.mascota_id}`} target="_blank">
+                    Ver ficha completa
+                    <Eye className="ml-2 h-3 w-3" />
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -206,28 +229,54 @@ export function SolicitudDetail({ solicitudId }: SolicitudDetailProps) {
         {/* Postulante Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Datos del Postulante</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Datos del Postulante
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{solicitud.postulante_nombre}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>{solicitud.postulante_correo}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span>DNI: {solicitud.dni}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{solicitud.telefono}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{solicitud.distrito_ciudad}</span>
+          <CardContent>
+            <div className="grid gap-4">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <User className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="font-medium">{solicitud.postulante_nombre}</div>
+                  <div className="text-xs text-muted-foreground">Nombre completo</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-sm">{solicitud.postulante_correo}</div>
+                    <div className="text-xs text-muted-foreground">Email</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-sm font-mono">{solicitud.dni}</div>
+                    <div className="text-xs text-muted-foreground">DNI</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-sm">{solicitud.telefono}</div>
+                    <div className="text-xs text-muted-foreground">Teléfono</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-sm">{solicitud.distrito_ciudad}</div>
+                    <div className="text-xs text-muted-foreground">Ubicación</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
