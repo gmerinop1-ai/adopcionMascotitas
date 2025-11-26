@@ -38,16 +38,60 @@ export async function POST(request: NextRequest) {
         );
       `,
       
-      // 3. Crear índices para mejorar rendimiento
+      // 3. Crear tabla franja_horaria para gestionar slots de tiempo
+      `
+        CREATE TABLE IF NOT EXISTS public.franja_horaria (
+          id uuid NOT NULL DEFAULT gen_random_uuid(),
+          fecha date NOT NULL,
+          hora_inicio time NOT NULL,
+          duracion_minutos integer NOT NULL DEFAULT 60,
+          cupo_maximo integer NOT NULL DEFAULT 1,
+          cupo_disponible integer NOT NULL DEFAULT 1,
+          estado character varying NOT NULL DEFAULT 'borrador'::character varying,
+          created_at timestamp with time zone NOT NULL DEFAULT now(),
+          updated_at timestamp with time zone NOT NULL DEFAULT now(),
+          CONSTRAINT franja_horaria_pkey PRIMARY KEY (id),
+          CONSTRAINT franja_horaria_estado_check CHECK (estado IN ('borrador', 'publicado', 'completado')),
+          CONSTRAINT franja_horaria_cupos_check CHECK (cupo_disponible <= cupo_maximo AND cupo_disponible >= 0),
+          CONSTRAINT franja_horaria_duracion_check CHECK (duracion_minutos >= 15 AND duracion_minutos <= 480)
+        );
+      `,
+      
+      // 4. Crear tabla reserva_franja para gestionar reservas de franjas
+      `
+        CREATE TABLE IF NOT EXISTS public.reserva_franja (
+          id uuid NOT NULL DEFAULT gen_random_uuid(),
+          franja_horaria_id uuid NOT NULL,
+          solicitud_id uuid NOT NULL,
+          estado character varying NOT NULL DEFAULT 'reservado'::character varying,
+          created_at timestamp with time zone NOT NULL DEFAULT now(),
+          updated_at timestamp with time zone NOT NULL DEFAULT now(),
+          CONSTRAINT reserva_franja_pkey PRIMARY KEY (id),
+          CONSTRAINT reserva_franja_franja_id_fkey FOREIGN KEY (franja_horaria_id) 
+            REFERENCES public.franja_horaria(id) ON DELETE CASCADE,
+          CONSTRAINT reserva_franja_solicitud_id_fkey FOREIGN KEY (solicitud_id) 
+            REFERENCES public.solicitud(id) ON DELETE CASCADE,
+          CONSTRAINT reserva_franja_estado_check CHECK (estado IN ('reservado', 'completado', 'cancelado')),
+          CONSTRAINT reserva_franja_unique_solicitud UNIQUE (solicitud_id)
+        );
+      `,
+      
+      // 5. Crear índices para mejorar rendimiento
       `
         CREATE INDEX IF NOT EXISTS idx_entrevista_solicitud_id ON public.entrevista(solicitud_id);
         CREATE INDEX IF NOT EXISTS idx_entrevista_fecha ON public.entrevista(fecha_entrevista);
         CREATE INDEX IF NOT EXISTS idx_entrevista_estado ON public.entrevista(estado);
         CREATE INDEX IF NOT EXISTS idx_solicitud_fecha_entrevista ON public.solicitud(fecha_entrevista);
         CREATE INDEX IF NOT EXISTS idx_solicitud_estado ON public.solicitud(estado);
+        CREATE INDEX IF NOT EXISTS idx_franja_horaria_fecha ON public.franja_horaria(fecha);
+        CREATE INDEX IF NOT EXISTS idx_franja_horaria_estado ON public.franja_horaria(estado);
+        CREATE INDEX IF NOT EXISTS idx_franja_horaria_fecha_hora ON public.franja_horaria(fecha, hora_inicio);
+        CREATE INDEX IF NOT EXISTS idx_reserva_franja_franja_id ON public.reserva_franja(franja_horaria_id);
+        CREATE INDEX IF NOT EXISTS idx_reserva_franja_solicitud_id ON public.reserva_franja(solicitud_id);
+        CREATE INDEX IF NOT EXISTS idx_reserva_franja_estado ON public.reserva_franja(estado);
       `,
       
-      // 4. Actualizar timestamps para registros existentes sin created_at
+      // 6. Actualizar timestamps para registros existentes sin created_at
       `
         UPDATE public.solicitud 
         SET created_at = now(), updated_at = now() 
@@ -184,16 +228,42 @@ export async function GET() {
       error: entrevistaError?.message
     }
 
+    // Verificar tabla franja_horaria
+    const { data: franjaData, error: franjaError } = await supabase
+      .from('franja_horaria')
+      .select('id')
+      .limit(1)
+
+    const franjaStatus = {
+      table_exists: !franjaError || !franjaError.message.includes('does not exist'),
+      error: franjaError?.message
+    }
+
+    // Verificar tabla reserva_franja
+    const { data: reservaData, error: reservaError } = await supabase
+      .from('reserva_franja')
+      .select('id')
+      .limit(1)
+
+    const reservaStatus = {
+      table_exists: !reservaError || !reservaError.message.includes('does not exist'),
+      error: reservaError?.message
+    }
+
     const allMigrationsComplete = 
       solicitudStatus.fecha_entrevista_exists &&
       solicitudStatus.created_at_exists &&
       solicitudStatus.updated_at_exists &&
-      entrevistaStatus.table_exists
+      entrevistaStatus.table_exists &&
+      franjaStatus.table_exists &&
+      reservaStatus.table_exists
 
     return NextResponse.json({
       migrations_complete: allMigrationsComplete,
       solicitud_table: solicitudStatus,
       entrevista_table: entrevistaStatus,
+      franja_horaria_table: franjaStatus,
+      reserva_franja_table: reservaStatus,
       recommendation: allMigrationsComplete 
         ? 'All migrations are complete' 
         : 'Run POST /api/setup/migrate to apply missing migrations'

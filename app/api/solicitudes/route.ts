@@ -5,7 +5,16 @@ import { insertSolicitud } from "@/lib/db"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { mascota_id, dni, telefono, distrito, motivacion, disponibilidad_tiempo, condiciones_hogar, user } = body
+    const { 
+      mascota_id, 
+      dni, 
+      telefono, 
+      distrito, 
+      motivacion, 
+      disponibilidad_tiempo, 
+      condiciones_hogar, 
+      user 
+    } = body
 
     console.log("[API] Datos recibidos en solicitud:", { 
       mascota_id, 

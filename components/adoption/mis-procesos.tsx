@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, Eye, Calendar, Clock } from "lucide-react"
+import { Loader2, Eye, Calendar, Clock, ArrowRight } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import type { SolicitudAdopcion } from "@/lib/db"
@@ -66,7 +66,7 @@ export function MisProcesos() {
               hour: '2-digit',
               minute: '2-digit'
             })}`
-          : "Nos pondremos en contacto contigo para coordinar una entrevista"
+          : "⏰ Necesitas seleccionar un horario para tu entrevista"
       case "aprobada":
         return "¡Felicidades! Tu solicitud ha sido aprobada. Puedes proceder con la adopción"
       case "rechazada":
@@ -154,6 +154,20 @@ export function MisProcesos() {
                 {getEstadoDescription(solicitud.estado, solicitud.fecha_entrevista)}
               </p>
 
+              {solicitud.estado === "entrevista" && !solicitud.fecha_entrevista && (
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2 text-orange-700">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">Acción requerida</span>
+                    </div>
+                    <p className="text-orange-600 mt-1">
+                      El administrador ha programado tu entrevista. Necesitas seleccionar el horario que mejor te convenga.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {solicitud.estado === "entrevista" && solicitud.fecha_entrevista && (
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="pt-4">
@@ -183,10 +197,29 @@ export function MisProcesos() {
                   </Link>
                 </Button>
                 
-                {solicitud.estado === "entrevista" && (
+                {solicitud.estado === "entrevista" && !solicitud.fecha_entrevista && (
+                  <Button asChild size="sm" className="bg-orange-600 hover:bg-orange-700">
+                    <Link href={`/seleccionar-horario/${solicitud.id}`}>
+                      <Clock className="mr-2 h-4 w-4" />
+                      Seleccionar Horario
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
+
+                {solicitud.estado === "entrevista" && solicitud.fecha_entrevista && (
                   <Button variant="secondary" size="sm">
                     <Clock className="mr-2 h-4 w-4" />
                     Recordatorio
+                  </Button>
+                )}
+
+                {solicitud.estado === "cancelada" && (
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href={`/seleccionar-horario/${solicitud.id}`}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Reprogramar
+                    </Link>
                   </Button>
                 )}
               </div>
