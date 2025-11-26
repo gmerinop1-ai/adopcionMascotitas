@@ -15,7 +15,6 @@ export function MascotasCatalog() {
     especie: "",
     sexo: "",
     tamano: "",
-    edad: "",
   })
 
   useEffect(() => {
@@ -42,26 +41,19 @@ export function MascotasCatalog() {
   const applyFilters = () => {
     let filtered = [...mascotas]
 
-    if (filters.especie) {
-      filtered = filtered.filter((m) => m.especie === filters.especie)
+    // Filtrar solo mascotas disponibles para adopción
+    filtered = filtered.filter((m) => m.estado === 'disponible')
+
+    if (filters.especie && filters.especie !== '') {
+      filtered = filtered.filter((m) => m.especie?.toLowerCase() === filters.especie.toLowerCase())
     }
 
-    if (filters.sexo) {
-      filtered = filtered.filter((m) => m.sexo === filters.sexo)
+    if (filters.sexo && filters.sexo !== '') {
+      filtered = filtered.filter((m) => m.sexo?.toLowerCase() === filters.sexo.toLowerCase())
     }
 
-    if (filters.tamano) {
-      filtered = filtered.filter((m) => m.tamano === filters.tamano)
-    }
-
-    if (filters.edad) {
-      if (filters.edad === "cachorro") {
-        filtered = filtered.filter((m) => m.edad && m.edad < 2)
-      } else if (filters.edad === "adulto") {
-        filtered = filtered.filter((m) => m.edad && m.edad >= 2 && m.edad < 7)
-      } else if (filters.edad === "senior") {
-        filtered = filtered.filter((m) => m.edad && m.edad >= 7)
-      }
+    if (filters.tamano && filters.tamano !== '') {
+      filtered = filtered.filter((m) => m.tamano?.toLowerCase() === filters.tamano.toLowerCase())
     }
 
     setFilteredMascotas(filtered)

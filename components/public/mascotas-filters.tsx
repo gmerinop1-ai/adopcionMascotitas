@@ -11,7 +11,6 @@ interface MascotasFiltersProps {
     especie: string
     sexo: string
     tamano: string
-    edad: string
   }
   onFiltersChange: (filters: any) => void
 }
@@ -26,7 +25,6 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
       especie: "",
       sexo: "",
       tamano: "",
-      edad: "",
     })
   }
 
@@ -48,7 +46,7 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="especie">Especie</Label>
-          <Select value={filters.especie} onValueChange={(value) => handleFilterChange("especie", value)}>
+          <Select value={filters.especie} onValueChange={(value) => handleFilterChange("especie", value === "all" ? "" : value)}>
             <SelectTrigger id="especie">
               <SelectValue placeholder="Todas" />
             </SelectTrigger>
@@ -56,16 +54,13 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="perro">Perro</SelectItem>
               <SelectItem value="gato">Gato</SelectItem>
-              <SelectItem value="conejo">Conejo</SelectItem>
-              <SelectItem value="ave">Ave</SelectItem>
-              <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="sexo">Sexo</Label>
-          <Select value={filters.sexo} onValueChange={(value) => handleFilterChange("sexo", value)}>
+          <Select value={filters.sexo} onValueChange={(value) => handleFilterChange("sexo", value === "all" ? "" : value)}>
             <SelectTrigger id="sexo">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
@@ -79,7 +74,7 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
 
         <div className="space-y-2">
           <Label htmlFor="tamano">Tamaño</Label>
-          <Select value={filters.tamano} onValueChange={(value) => handleFilterChange("tamano", value)}>
+          <Select value={filters.tamano} onValueChange={(value) => handleFilterChange("tamano", value === "all" ? "" : value)}>
             <SelectTrigger id="tamano">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
@@ -92,20 +87,7 @@ export function MascotasFilters({ filters, onFiltersChange }: MascotasFiltersPro
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="edad">Edad</Label>
-          <Select value={filters.edad} onValueChange={(value) => handleFilterChange("edad", value)}>
-            <SelectTrigger id="edad">
-              <SelectValue placeholder="Todas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="cachorro">Cachorro (0-2 años)</SelectItem>
-              <SelectItem value="adulto">Adulto (2-7 años)</SelectItem>
-              <SelectItem value="senior">Senior (7+ años)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+
       </CardContent>
     </Card>
   )

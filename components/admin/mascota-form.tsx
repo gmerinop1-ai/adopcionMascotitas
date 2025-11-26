@@ -363,14 +363,15 @@ export function MascotaForm({ mascotaId }: MascotaFormProps) {
               <Label htmlFor="especie">
                 Especie <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="especie"
-                name="especie"
-                value={formData.especie}
-                onChange={handleChange}
-                placeholder="Ej: Perro, Gato"
-                disabled={isLoading}
-              />
+              <Select value={formData.especie} onValueChange={(value) => handleSelectChange("especie", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona la especie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="perro">Perro</SelectItem>
+                  <SelectItem value="gato">Gato</SelectItem>
+                </SelectContent>
+              </Select>
               {errors.especie && <p className="text-sm text-red-500">{errors.especie}</p>}
             </div>
 
