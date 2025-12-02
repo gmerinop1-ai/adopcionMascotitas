@@ -52,6 +52,42 @@ ADD COLUMN updated_at timestamp with time zone DEFAULT now();
       console.log('✅ Tabla entrevista - OK')
     }
 
+    // Verificar tabla donacion
+    const { data: donacionData, error: donacionError } = await supabase
+      .from('donacion')
+      .select('id')
+      .limit(1)
+
+    console.log('📋 Estado tabla donacion:')
+    if (donacionError) {
+      console.error('❌ Error:', donacionError.message)
+      if (donacionError.message.includes('does not exist')) {
+        console.log('🚨 PROBLEMA: La tabla donacion NO existe')
+        console.log('💡 SOLUCIÓN: Ejecutar las migraciones de donaciones en Supabase')
+        return false
+      }
+    } else {
+      console.log('✅ Tabla donacion - OK')
+    }
+
+    // Verificar tabla franja_horaria
+    const { data: franjaData, error: franjaError } = await supabase
+      .from('franja_horaria')
+      .select('id')
+      .limit(1)
+
+    console.log('📋 Estado tabla franja_horaria:')
+    if (franjaError) {
+      console.error('❌ Error:', franjaError.message)
+      if (franjaError.message.includes('does not exist')) {
+        console.log('🚨 PROBLEMA: La tabla franja_horaria NO existe')
+        console.log('💡 SOLUCIÓN: Ejecutar las migraciones de franjas en Supabase')
+        return false
+      }
+    } else {
+      console.log('✅ Tabla franja_horaria - OK')
+    }
+
     console.log('🎉 Todas las migraciones están completas!')
     return true
 
@@ -92,18 +128,89 @@ CREATE TABLE IF NOT EXISTS public.entrevista (
     REFERENCES public.solicitud(id) ON DELETE CASCADE
 );
 
--- 3. Crear índices
+-- 3. Crear tabla franjas horarias
+CREATE TABLE IF NOT EXISTS public.franja_horaria (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fecha date NOT NULL,
+  hora_inicio time NOT NULL,
+  duracion_minutos integer NOT NULL DEFAULT 30,
+  cupo_maximo integer NOT NULL DEFAULT 1,
+  cupo_disponible integer NOT NULL DEFAULT 1,
+  estado character varying NOT NULL DEFAULT 'borrador',
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT franja_horaria_pkey PRIMARY KEY (id),
+  CONSTRAINT franja_horaria_estado_check CHECK (estado IN ('borrador', 'publicado', 'completado')),
+  CONSTRAINT franja_horaria_cupo_check CHECK (cupo_disponible >= 0 AND cupo_disponible <= cupo_maximo)
+);
+
+-- 4. Crear tabla reservas de franjas
+CREATE TABLE IF NOT EXISTS public.reserva_franja (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  franja_horaria_id uuid NOT NULL,
+  solicitud_id uuid NOT NULL,
+  estado character varying NOT NULL DEFAULT 'reservado',
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT reserva_franja_pkey PRIMARY KEY (id),
+  CONSTRAINT reserva_franja_franja_id_fkey FOREIGN KEY (franja_horaria_id) 
+    REFERENCES public.franja_horaria(id) ON DELETE CASCADE,
+  CONSTRAINT reserva_franja_solicitud_id_fkey FOREIGN KEY (solicitud_id) 
+    REFERENCES public.solicitud(id) ON DELETE CASCADE,
+  CONSTRAINT reserva_franja_estado_check CHECK (estado IN ('reservado', 'completado', 'cancelado'))
+);
+
+-- 5. Crear tabla de donaciones
+CREATE TABLE IF NOT EXISTS public.donacion (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  donor_name character varying,
+  donor_email character varying,
+  amount decimal(10,2) NOT NULL,
+  frequency character varying NOT NULL DEFAULT 'one-time',
+  payment_method character varying NOT NULL,
+  status character varying NOT NULL DEFAULT 'pending',
+  stripe_session_id character varying,
+  yape_transaction_id character varying,
+  transaction_data jsonb,
+  message text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT donacion_pkey PRIMARY KEY (id),
+  CONSTRAINT donacion_frequency_check CHECK (frequency IN ('one-time', 'monthly')),
+  CONSTRAINT donacion_status_check CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  CONSTRAINT donacion_payment_method_check CHECK (payment_method IN ('stripe', 'culqi', 'yape', 'bank_transfer')),
+  CONSTRAINT donacion_amount_check CHECK (amount > 0)
+);
+
+-- 6. Crear índices para mejor performance
 CREATE INDEX IF NOT EXISTS idx_entrevista_solicitud_id ON public.entrevista(solicitud_id);
 CREATE INDEX IF NOT EXISTS idx_entrevista_fecha ON public.entrevista(fecha_entrevista);
 CREATE INDEX IF NOT EXISTS idx_entrevista_estado ON public.entrevista(estado);
 CREATE INDEX IF NOT EXISTS idx_solicitud_fecha_entrevista ON public.solicitud(fecha_entrevista);
 CREATE INDEX IF NOT EXISTS idx_solicitud_estado ON public.solicitud(estado);
 
--- 4. Actualizar timestamps para registros existentes
+CREATE INDEX IF NOT EXISTS idx_franja_horaria_fecha ON public.franja_horaria(fecha);
+CREATE INDEX IF NOT EXISTS idx_franja_horaria_estado ON public.franja_horaria(estado);
+CREATE INDEX IF NOT EXISTS idx_reserva_franja_horaria_id ON public.reserva_franja(franja_horaria_id);
+CREATE INDEX IF NOT EXISTS idx_reserva_franja_solicitud_id ON public.reserva_franja(solicitud_id);
+
+CREATE INDEX IF NOT EXISTS idx_donacion_email ON public.donacion(donor_email);
+CREATE INDEX IF NOT EXISTS idx_donacion_status ON public.donacion(status);
+CREATE INDEX IF NOT EXISTS idx_donacion_payment_method ON public.donacion(payment_method);
+CREATE INDEX IF NOT EXISTS idx_donacion_created_at ON public.donacion(created_at);
+
+-- 7. Actualizar timestamps para registros existentes
 UPDATE public.solicitud 
 SET created_at = COALESCE(created_at, now()), 
     updated_at = COALESCE(updated_at, now()) 
 WHERE created_at IS NULL OR updated_at IS NULL;
+
+-- 8. Habilitar Row Level Security (RLS)
+ALTER TABLE public.donacion ENABLE ROW LEVEL SECURITY;
+
+-- 9. Crear políticas RLS para donaciones (permitir lectura/escritura pública para donaciones)
+CREATE POLICY IF NOT EXISTS "Donaciones públicas" ON public.donacion
+    FOR ALL USING (true);
     `
     
     console.log(migrations)
