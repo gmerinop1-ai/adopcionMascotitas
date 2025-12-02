@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { PawPrint, Heart, User, LogOut, Settings } from "lucide-react"
+import { PawPrint, Heart, User, LogOut, Settings, HandHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
@@ -28,6 +28,12 @@ export function PublicNav() {
                 <Link href="/mascotas">
                   <Heart className="mr-2 h-4 w-4" />
                   Adoptar
+                </Link>
+              </Button>
+              <Button asChild variant={pathname === "/donaciones" ? "default" : "ghost"} size="sm">
+                <Link href="/donaciones">
+                  <HandHeart className="mr-2 h-4 w-4" />
+                  Donar
                 </Link>
               </Button>
               <Button asChild variant={pathname === "/mis-procesos" ? "default" : "ghost"} size="sm">

@@ -206,3 +206,150 @@ CREATE TABLE reserva_franja (
 6. Subida de documentos adicionales
 7. **Reprogramación de entrevistas**: Permitir cambios de horario si hay disponibilidad
 8. **Recordatorios automáticos**: Notificaciones antes de las entrevistas
+
+## 🎊 SISTEMA DE DONACIONES (NUEVO)
+
+### ✅ Funcionalidades de Pagos Implementadas
+
+#### Sistema de Donaciones Completo
+- **Planes Predefinidos**: 3 niveles de donación mensual
+  - 🥉 Cuidado Básico: S/ 30/mes
+  - 🥈 Cuidado Completo: S/ 60/mes (Popular)
+  - 🥇 Protector Ángel: S/ 120/mes
+- **Donación Personalizada**: Monto libre con frecuencia configurable
+- **Frecuencias**: Una vez o mensual (suscripciones)
+
+#### Métodos de Pago Soportados
+- 💳 **Stripe**: Tarjetas de crédito/débito (internacionales)
+- 📱 **Yape**: Pagos con QR codes y deep links para móviles
+- 🏦 **Transferencia Bancaria**: (Preparado para futuro)
+
+#### Características Avanzadas
+- 🔒 **Pagos Seguros**: Encriptación completa
+- 📧 **Confirmaciones**: Emails automáticos
+- 📊 **Tracking**: Seguimiento completo de transacciones
+- 🎨 **UI Responsiva**: Optimizada para móviles
+- 📱 **Deep Links**: Integración nativa con Yape
+
+### 🗄️ Estructura de Base de Datos para Donaciones
+
+```sql
+-- Tabla principal de donaciones
+CREATE TABLE donacion (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  donor_name varchar,
+  donor_email varchar,
+  amount decimal(10,2) NOT NULL,
+  frequency varchar NOT NULL DEFAULT 'one-time',
+  payment_method varchar NOT NULL,
+  status varchar NOT NULL DEFAULT 'pending',
+  stripe_session_id varchar,
+  yape_transaction_id varchar,
+  transaction_data jsonb,
+  message text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  
+  -- Constraints
+  CONSTRAINT donacion_frequency_check CHECK (frequency IN ('one-time', 'monthly')),
+  CONSTRAINT donacion_status_check CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  CONSTRAINT donacion_payment_method_check CHECK (payment_method IN ('stripe', 'yape', 'bank_transfer')),
+  CONSTRAINT donacion_amount_check CHECK (amount > 0)
+);
+```
+
+### 🛠️ APIs de Pagos Implementadas
+
+#### Stripe (Tarjetas)
+- `POST /api/payments/stripe/create-session` - Crear sesión de pago
+- `GET /api/payments/stripe/verify-session` - Verificar transacción
+
+#### Yape (QR)
+- `POST /api/payments/yape/create-qr` - Generar QR code
+- `POST /api/payments/yape/webhook` - Procesar confirmaciones
+
+#### Administración
+- `GET /api/donations` - Obtener todas las donaciones
+- `GET /api/setup/check-migrations` - Verificar migraciones
+
+### 🎨 Componentes UI de Donaciones
+
+#### Páginas Principales
+- `/donaciones` - Página principal de donaciones
+- `/donaciones/exito` - Confirmación de pago exitoso
+
+#### Características de UI
+- **Selector de Planes**: Cards interactivos con planes predefinidos
+- **Monto Personalizado**: Input para cantidades libres
+- **Método de Pago**: Radio buttons con iconos
+- **Modal QR**: Para pagos Yape en desktop
+- **Resumen de Donación**: Confirmación antes del pago
+- **Página de Éxito**: Con detalles de transacción y opciones para compartir
+
+### 📱 Flujos de Pago
+
+#### 💳 Flujo Stripe
+1. Usuario completa formulario de donación
+2. Se crea registro en BD con status 'pending'
+3. Redirección a Stripe Checkout
+4. Usuario completa pago con tarjeta
+5. Stripe redirige a página de éxito
+6. API verifica y actualiza status a 'completed'
+
+#### 📱 Flujo Yape
+1. Usuario completa formulario de donación
+2. Se genera QR code único con referencia
+3. **Móvil**: Deep link directo a app Yape
+4. **Desktop**: Modal con QR para escanear
+5. Usuario paga en Yape
+6. Webhook actualiza status automáticamente
+
+### 🔧 Configuración Técnica
+
+#### Variables de Entorno Requeridas
+```env
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+
+# Yape
+YAPE_WEBHOOK_SECRET=webhook_secret
+NEXT_PUBLIC_YAPE_MERCHANT_ID=ADOPCION_MASCOTITAS
+
+# General
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
+
+#### Dependencias Agregadas
+```json
+{
+  "stripe": "^14.x.x",
+  "@types/stripe": "^8.x.x",
+  "qrcode": "^1.x.x",
+  "@types/qrcode": "^1.x.x"
+}
+```
+
+### 🎯 Estados de Donación
+
+1. **pending** - Donación creada, esperando pago
+2. **completed** - Pago confirmado exitosamente
+3. **failed** - Pago falló o fue cancelado
+4. **refunded** - Donación reembolsada
+
+### 🌟 Integración con el Sistema
+
+#### Navegación
+- ✅ Botón "Donar" agregado al navigation
+- ✅ Sección destacada en página principal
+- ✅ Call-to-action en página de éxito de adopción
+
+#### Base de Datos
+- ✅ Funciones completas en `lib/db.ts`
+- ✅ Migraciones automáticas en `check-migrations.ts`
+- ✅ Validaciones y constraints en BD
+
+#### Configuración
+- ✅ Planes configurables en `donation-config.ts`
+- ✅ Métodos de pago centralizados
+- ✅ Validaciones de monto por método

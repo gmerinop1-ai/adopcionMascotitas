@@ -122,6 +122,42 @@ export interface ReservaFranja {
   updated_at: string
 }
 
+export interface Donacion {
+  id: string
+  donor_name?: string
+  donor_email?: string
+  amount: number
+  frequency: 'one-time' | 'monthly'
+  payment_method: string
+  status: 'pending' | 'completed' | 'failed' | 'refunded'
+  culqi_charge_id?: string
+  culqi_token_id?: string
+  yape_transaction_id?: string
+  yape_code?: string
+  transaction_data?: any
+  message?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DonationPlan {
+  id: string
+  name: string
+  description: string
+  amount: number
+  frequency: 'one-time' | 'monthly'
+  features: string[]
+  popular?: boolean
+}
+
+export interface PaymentMethod {
+  id: string
+  name: string
+  type: 'card' | 'yape' | 'bank_transfer'
+  icon: string
+  available: boolean
+}
+
 // Database helper functions with better error handling
 export async function insertUsuario(data: {
   correo: string
@@ -1245,6 +1281,128 @@ export async function reservarFranjaHoraria(franjaId: string, solicitudId: strin
     
   } catch (error) {
     console.error('[DB] reservarFranjaHoraria failed:', error)
+    throw error
+  }
+}
+
+// === FUNCIONES PARA DONACIONES ===
+export async function insertDonation(data: {
+  donor_name?: string
+  donor_email?: string
+  amount: number
+  frequency: 'one-time' | 'monthly'
+  payment_method: string
+  status: 'pending' | 'completed' | 'failed'
+  stripe_session_id?: string
+  yape_transaction_id?: string
+  message?: string
+}) {
+  try {
+    console.log('[DB] === INICIO insertDonation ===')
+    console.log('[DB] Datos recibidos:', JSON.stringify(data, null, 2))
+    
+    const clientToUse = supabase
+    
+    const { data: donation, error } = await clientToUse
+      .from('donacion')
+      .insert([{
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('[DB] Error inserting donation:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log('[DB] ✅ Donación insertada:', donation)
+    return donation
+  } catch (error) {
+    console.error('[DB] insertDonation failed:', error)
+    throw error
+  }
+}
+
+export async function updateDonationStatus(id: string, status: 'completed' | 'failed', transactionData?: any) {
+  try {
+    console.log(`[DB] Actualizando donación ${id} a estado: ${status}`)
+    
+    const clientToUse = supabase
+    
+    const updateData = {
+      status,
+      updated_at: new Date().toISOString(),
+      ...(transactionData && { transaction_data: transactionData })
+    }
+    
+    const { data, error } = await clientToUse
+      .from('donacion')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('[DB] Error updating donation status:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log('[DB] ✅ Estado de donación actualizado')
+    return data
+  } catch (error) {
+    console.error('[DB] updateDonationStatus failed:', error)
+    throw error
+  }
+}
+
+export async function getDonationsByEmail(email: string) {
+  try {
+    console.log(`[DB] Obteniendo donaciones para email: ${email}`)
+    
+    const clientToUse = supabase
+    
+    const { data, error } = await clientToUse
+      .from('donacion')
+      .select('*')
+      .eq('donor_email', email)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('[DB] Error getting donations by email:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Donaciones encontradas: ${data?.length || 0}`)
+    return data || []
+  } catch (error) {
+    console.error('[DB] getDonationsByEmail failed:', error)
+    throw error
+  }
+}
+
+export async function getAllDonations() {
+  try {
+    console.log('[DB] Obteniendo todas las donaciones')
+    
+    const clientToUse = supabase
+    
+    const { data, error } = await clientToUse
+      .from('donacion')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('[DB] Error getting all donations:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Total donaciones: ${data?.length || 0}`)
+    return data || []
+  } catch (error) {
+    console.error('[DB] getAllDonations failed:', error)
     throw error
   }
 }

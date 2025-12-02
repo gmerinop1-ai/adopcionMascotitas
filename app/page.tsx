@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Heart, PawPrint, Users, Shield } from "lucide-react"
+import { Heart, PawPrint, Users, Shield, HandHeart } from "lucide-react"
 import { PublicNav } from "@/components/public/public-nav"
 
 export default function HomePage() {
@@ -34,6 +34,12 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-base bg-transparent">
+              <Link href="/donaciones">
+                <HandHeart className="mr-2 h-5 w-5" />
+                Hacer una Donación
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="text-base">
               <Link href="/login">Iniciar Sesión</Link>
             </Button>
           </div>
@@ -82,6 +88,51 @@ export default function HomePage() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Donation Section */}
+      <section className="py-16 px-4 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20">
+        <div className="container mx-auto max-w-4xl text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-orange-100 dark:bg-orange-900/30 px-4 py-2 text-sm font-medium text-orange-700 dark:text-orange-300">
+            <HandHeart className="h-4 w-4" />
+            <span>Ayuda a Nuestras Mascotas</span>
+          </div>
+
+          <h2 className="mb-4 text-3xl font-bold">Tu donación salva vidas</h2>
+          <p className="mb-8 text-lg text-muted-foreground">
+            Cada donación ayuda a cubrir gastos veterinarios, alimentación y cuidados especiales para las mascotas que esperan un hogar.
+            Con tan solo S/ 30 al mes puedes alimentar a una mascota por una semana completa.
+          </p>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center mb-8">
+            <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
+              <Link href="/donaciones">
+                <HandHeart className="mr-2 h-5 w-5" />
+                Donar Ahora
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/mascotas">
+                Ver Mascotas Disponibles
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3 mt-12">
+            <div className="text-center">
+              <div className="mb-2 text-2xl font-bold text-orange-600">S/ 30</div>
+              <p className="text-sm text-muted-foreground">Alimenta una mascota por 1 semana</p>
+            </div>
+            <div className="text-center">
+              <div className="mb-2 text-2xl font-bold text-orange-600">S/ 60</div>
+              <p className="text-sm text-muted-foreground">Cuidado veterinario completo</p>
+            </div>
+            <div className="text-center">
+              <div className="mb-2 text-2xl font-bold text-orange-600">S/ 120</div>
+              <p className="text-sm text-muted-foreground">Alimentación mensual + tratamientos</p>
+            </div>
           </div>
         </div>
       </section>
