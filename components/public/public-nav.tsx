@@ -37,7 +37,7 @@ export function PublicNav() {
                 </Link>
               </Button>
               <Button asChild variant={pathname === "/mis-procesos" ? "default" : "ghost"} size="sm">
-                <Link href="/mis-procesos">Mis Procesos</Link>
+                <Link href="/mis-procesos">Mi Cuenta</Link>
               </Button>
             </div>
           </div>
