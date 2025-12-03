@@ -8,11 +8,9 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Heart, CreditCard, Smartphone, QrCode } from 'lucide-react'
-import { DONATION_PLANS, PAYMENT_METHODS } from '@/lib/donation-config'
+import { Heart, CreditCard } from 'lucide-react'
+import { DONATION_PLANS } from '@/lib/donation-config'
 import { DonationPlan } from '@/lib/db'
-import Image from 'next/image'
 
 // Declarar Culqi global para TypeScript
 declare global {
@@ -26,21 +24,14 @@ export default function DonationsPage() {
   const [selectedPlan, setSelectedPlan] = useState<DonationPlan | null>(null)
   const [customAmount, setCustomAmount] = useState('')
   const [frequency, setFrequency] = useState<'one-time' | 'monthly'>('monthly')
-  const [paymentMethod, setPaymentMethod] = useState('culqi')
   const [donor, setDonor] = useState({
     name: '',
     email: '',
     message: ''
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [showYapeQR, setShowYapeQR] = useState(false)
-  const [qrData, setQrData] = useState<any>(null)
   const [culqiPublicKey, setCulqiPublicKey] = useState<string>('')
   const [currentDonationId, setCurrentDonationId] = useState<string>('')
-  const [showYapeForm, setShowYapeForm] = useState(false)
-  const [yapeCode, setYapeCode] = useState('')
-  const [processingYape, setProcessingYape] = useState(false)
-  const [yapeResult, setYapeResult] = useState<any>(null)
 
   // Cargar script de Culqi
   useEffect(() => {
@@ -183,52 +174,6 @@ export default function DonationsPage() {
     }
   }, [currentDonationId, selectedPlan, customAmount, donor]) // Dependencias importantes
 
-  const handleYapePayment = async () => {
-    if (!yapeCode || yapeCode.length !== 6) {
-      alert('Por favor ingresa tu código de aprobación Yape de 6 dígitos')
-      return
-    }
-
-    setProcessingYape(true)
-
-    try {
-      const donationData = {
-        amount: getFinalAmount(),
-        frequency,
-        donor_name: donor.name,
-        donor_email: donor.email,
-        message: donor.message,
-        yape_code: yapeCode
-      }
-
-      const response = await fetch('/api/payments/yape/create-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(donationData)
-      })
-
-      const result = await response.json()
-      
-      if (result.error) {
-        alert(result.error)
-        return
-      }
-
-      setYapeResult(result)
-      
-      // Simular tiempo de procesamiento y luego verificar estado
-      setTimeout(() => {
-        window.location.href = `/donaciones/exito?donation_id=${result.donationId}&yape_simulation=true`
-      }, result.estimatedTime * 1000)
-
-    } catch (error) {
-      console.error('Error processing Yape payment:', error)
-      alert('Error al procesar el pago Yape. Inténtalo de nuevo.')
-    } finally {
-      setProcessingYape(false)
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -249,9 +194,8 @@ export default function DonationsPage() {
         message: donor.message
       }
 
-      if (paymentMethod === 'culqi') {
-        // Procesar con Culqi
-        console.log('[FRONTEND] Enviando datos a Culqi API:', donationData)
+      // Procesar con Culqi (que ahora incluye Yape)
+      console.log('[FRONTEND] Enviando datos a Culqi API:', donationData)
         
         const response = await fetch('/api/payments/culqi/create-session', {
           method: 'POST',
@@ -316,7 +260,7 @@ export default function DonationsPage() {
           window.Culqi.options({
             paymentMethods: {
               tarjeta: true,
-              yape: false,
+              yape: true, // Habilitar Yape a través de Culqi
               billetera: false,
               bancaMovil: false,
               agente: false,
@@ -337,11 +281,6 @@ export default function DonationsPage() {
           alert(`Error configurando Culqi: ${culqiError.message}`)
         }
         
-      } else if (paymentMethod === 'yape') {
-        // Mostrar formulario de código Yape
-        setShowYapeForm(true)
-      }
-
     } catch (error) {
       console.error('Error processing payment:', error)
       alert('Error al procesar el pago. Inténtalo de nuevo.')
@@ -361,27 +300,6 @@ export default function DonationsPage() {
           Tu donación ayuda a cubrir gastos de alimentación, atención veterinaria y cuidados especiales 
           para las mascotas que esperan encontrar un hogar.
         </p>
-        
-        {/* Botón de diagnóstico temporal */}
-        <div className="mt-4">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/test/env')
-                const result = await response.json()
-                console.log('[DIAGNOSTIC] Environment check:', result)
-                alert(JSON.stringify(result, null, 2))
-              } catch (error) {
-                console.error('[DIAGNOSTIC] Error:', error)
-                alert('Error en diagnóstico: ' + error.message)
-              }
-            }}
-          >
-            🔧 Diagnóstico de Configuración
-          </Button>
-        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
@@ -506,22 +424,6 @@ export default function DonationsPage() {
                   />
                 </div>
 
-                {/* Método de Pago */}
-                <div>
-                  <Label>Método de Pago</Label>
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    {PAYMENT_METHODS.filter(method => method.available).map((method) => (
-                      <div key={method.id} className="flex items-center space-x-2">
-                        <RadioGroupItem value={method.id} id={method.id} />
-                        <Label htmlFor={method.id} className="flex items-center cursor-pointer">
-                          <span className="mr-2">{method.icon}</span>
-                          {method.name}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-
                 {/* Resumen */}
                 <Card className="bg-muted/50">
                   <CardContent className="pt-4">
@@ -544,8 +446,7 @@ export default function DonationsPage() {
                 >
                   {isLoading ? 'Procesando...' : (
                     <>
-                      {paymentMethod === 'culqi' && <CreditCard className="mr-2 h-4 w-4" />}
-                      {paymentMethod === 'yape' && <Smartphone className="mr-2 h-4 w-4" />}
+                      <CreditCard className="mr-2 h-4 w-4" />
                       Donar S/ {getFinalAmount().toFixed(2)}
                     </>
                   )}
@@ -559,7 +460,7 @@ export default function DonationsPage() {
             <CardContent className="pt-6">
               <div className="text-sm text-muted-foreground space-y-2">
                 <p><strong>💳 Pagos Seguros:</strong> Todas las transacciones están protegidas por Culqi, el procesador de pagos líder en Perú.</p>
-                <p><strong>📱 Yape:</strong> Simulación de pago rápido con billetera digital (entorno de prueba).</p>
+                <p><strong>📱 Yape y Tarjetas:</strong> Acepta tarjetas de crédito/débito y Yape a través de Culqi.</p>
                 <p><strong>📧 Comprobante:</strong> Recibirás un email con los detalles de tu donación.</p>
                 <p><strong>❤️ Transparencia:</strong> Te mantendremos informado del impacto de tu donación.</p>
               </div>
@@ -567,155 +468,6 @@ export default function DonationsPage() {
           </Card>
         </div>
       </div>
-
-      {/* Modal Simulación Yape */}
-      <Dialog open={showYapeForm} onOpenChange={setShowYapeForm}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Smartphone className="mr-2 text-purple-600" />
-              Pago con Yape
-            </DialogTitle>
-            <DialogDescription>
-              Ingresa tu código de aprobación Yape para completar la donación
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-              <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">
-                📱 Simulación de Yape
-              </h4>
-              <p className="text-sm text-purple-600 dark:text-purple-300">
-                Este es un entorno de prueba. El pago se procesará automáticamente.
-              </p>
-            </div>
-            
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium">Monto a donar:</span>
-                <span className="text-lg font-bold">S/ {getFinalAmount().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Destinatario:</span>
-                <span>ONG Adopción Mascotitas</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Número Yape:</span>
-                <span>987 654 321</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="yape-code">Código de Aprobación Yape</Label>
-              <Input
-                id="yape-code"
-                type="text"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                placeholder="123456"
-                value={yapeCode}
-                onChange={(e) => setYapeCode(e.target.value.replace(/[^0-9]/g, ''))}
-                className="text-center text-lg font-mono tracking-widest"
-              />
-              <p className="text-xs text-muted-foreground">
-                💡 Para testing: evita usar 000000, 111111 o 123456 (fallarán)
-              </p>
-            </div>
-
-            {yapeResult && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  ✅ {yapeResult.message}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ID: {yapeResult.transactionId}
-                </p>
-              </div>
-            )}
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowYapeForm(false)
-                  setYapeCode('')
-                  setYapeResult(null)
-                }}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleYapePayment}
-                disabled={processingYape || yapeCode.length !== 6}
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
-              >
-                {processingYape ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <Smartphone className="mr-2 h-4 w-4" />
-                    Pagar S/ {getFinalAmount().toFixed(2)}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal QR Yape (Legacy) */}
-      <Dialog open={showYapeQR} onOpenChange={setShowYapeQR}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <QrCode className="mr-2" />
-              Pagar con Yape
-            </DialogTitle>
-            <DialogDescription>
-              Escanea el código QR con tu app Yape para completar la donación
-            </DialogDescription>
-          </DialogHeader>
-          
-          {qrData && (
-            <div className="text-center space-y-4">
-              <div className="bg-white p-4 rounded-lg inline-block">
-                <Image
-                  src={qrData.qrCodeImage}
-                  alt="QR Code Yape"
-                  width={200}
-                  height={200}
-                  className="mx-auto"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-lg font-semibold">Monto: S/ {qrData.amount}</p>
-                <p className="text-sm text-muted-foreground">
-                  Referencia: {qrData.reference}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  El código expira en {Math.floor(qrData.expiresIn / 60)} minutos
-                </p>
-              </div>
-              
-              <div className="pt-4">
-                <Button 
-                  onClick={() => window.location.href = qrData.yapeUrl}
-                  className="w-full"
-                >
-                  <Smartphone className="mr-2 h-4 w-4" />
-                  Abrir en Yape
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
