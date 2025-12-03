@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, Heart, Share2, ArrowLeft } from 'lucide-react'
+import { CheckCircle, Heart, Share2, ArrowLeft, Download, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DonationSuccessPage() {
@@ -49,6 +49,17 @@ export default function DonationSuccessPage() {
       const text = encodeURIComponent('¡Acabo de hacer una donación para ayudar a las mascotas en adopción! 🐕🐱')
       const url = encodeURIComponent(window.location.origin + '/donaciones')
       window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank')
+    }
+  }
+
+  const handleDownloadReceipt = async () => {
+    try {
+      // Abrir en nueva pestaña para permitir al usuario guardar como PDF
+      const url = `/api/donations/receipt-pdf?donation_id=${donationId}`
+      window.open(url, '_blank')
+    } catch (error) {
+      console.error('Error abriendo comprobante:', error)
+      alert('Error al abrir el comprobante. Inténtalo de nuevo.')
     }
   }
 
@@ -128,6 +139,13 @@ export default function DonationSuccessPage() {
                 Ver Mascotas Disponibles
               </Link>
             </Button>
+            
+            {donationId && (
+              <Button variant="outline" onClick={handleDownloadReceipt}>
+                <FileText className="w-4 h-4 mr-2" />
+                Ver Comprobante
+              </Button>
+            )}
             
             <Button variant="outline" onClick={handleShare}>
               <Share2 className="w-4 h-4 mr-2" />

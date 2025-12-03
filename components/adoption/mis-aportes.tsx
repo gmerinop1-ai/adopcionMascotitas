@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, CreditCard, Calendar, ArrowRight, Heart, TrendingUp } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, CreditCard, Calendar, ArrowRight, Heart, TrendingUp, Download, FileText } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import type { Donacion } from "@/lib/db"
 
@@ -96,6 +97,17 @@ export function MisAportes() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const handleDownloadReceipt = async (donationId: string) => {
+    try {
+      // Abrir en nueva pestaña para permitir al usuario guardar como PDF
+      const url = `/api/donations/receipt-pdf?donation_id=${donationId}`
+      window.open(url, '_blank')
+    } catch (error) {
+      console.error('Error abriendo comprobante:', error)
+      alert('Error al abrir el comprobante. Inténtalo de nuevo.')
+    }
   }
 
   if (isLoading) {
@@ -215,6 +227,17 @@ export function MisAportes() {
                     <Calendar className="h-3 w-3" />
                     <span>{formatDate(donation.created_at)}</span>
                   </div>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadReceipt(donation.id)}
+                  >
+                    <FileText className="mr-2 h-3 w-3" />
+                    Ver Comprobante
+                  </Button>
                 </div>
               </div>
 

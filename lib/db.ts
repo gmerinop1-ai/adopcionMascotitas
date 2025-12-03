@@ -1406,3 +1406,32 @@ export async function getAllDonations() {
     throw error
   }
 }
+
+export async function getDonationById(id: string) {
+  try {
+    console.log(`[DB] Obteniendo donación por ID: ${id}`)
+    
+    const clientToUse = supabase
+    
+    const { data, error } = await clientToUse
+      .from('donacion')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`[DB] No se encontró donación con ID: ${id}`)
+        return null
+      }
+      console.error('[DB] Error getting donation by ID:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Donación encontrada:`, data)
+    return data
+  } catch (error) {
+    console.error('[DB] getDonationById failed:', error)
+    throw error
+  }
+}
