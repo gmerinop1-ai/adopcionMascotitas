@@ -7,12 +7,12 @@ async function createDonacionesTable() {
   }
 
   try {
-    console.log('🚀 Creando tabla donaciones...')
+    console.log('🚀 Creando tabla donacion...')
     
     // SQL para crear la tabla
     const createTableSQL = `
       -- Crear tabla de donaciones
-      CREATE TABLE IF NOT EXISTS donaciones (
+      CREATE TABLE IF NOT EXISTS donacion (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         donor_name TEXT,
         donor_email TEXT,
@@ -48,7 +48,7 @@ async function createDonacionesTable() {
       return false
     }
     
-    console.log('✅ Tabla donaciones creada correctamente!')
+    console.log('✅ Tabla donacion creada correctamente!')
     return true
     
   } catch (error) {

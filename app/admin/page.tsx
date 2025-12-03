@@ -1,7 +1,8 @@
 import { AdminNav } from "@/components/admin/admin-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PawPrint, FileText, CheckCircle, Clock } from "lucide-react"
+import { PawPrint, FileText, CheckCircle, Clock, Heart } from "lucide-react"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import Link from "next/link"
 
 export default function AdminDashboardPage() {
   return (
@@ -15,7 +16,7 @@ export default function AdminDashboardPage() {
             <p className="text-muted-foreground mt-1">Resumen general del sistema de adopción</p>
           </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Mascotas Disponibles</CardTitle>
@@ -57,6 +58,23 @@ export default function AdminDashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">47</div>
               <p className="text-xs text-muted-foreground">Este mes</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-primary">Donaciones Recibidas</CardTitle>
+              <Heart className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">S/ 2,450</div>
+              <p className="text-xs text-primary/70">Este mes</p>
+              <Link 
+                href="/admin/donaciones"
+                className="text-xs text-primary hover:underline mt-1 inline-block"
+              >
+                Ver detalles →
+              </Link>
             </CardContent>
           </Card>
         </div>

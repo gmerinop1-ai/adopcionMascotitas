@@ -95,12 +95,12 @@ export async function POST() {
   }
 
   try {
-    console.log('🔄 Recreando tabla donaciones...')
+    console.log('🔄 Recreando tabla donacion...')
     
     const recreateSQL = `
-      DROP TABLE IF EXISTS donaciones;
+      DROP TABLE IF EXISTS donacion;
       
-      CREATE TABLE donaciones (
+      CREATE TABLE donacion (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
         donor_name TEXT,
         donor_email TEXT,
@@ -120,13 +120,13 @@ export async function POST() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
-      CREATE INDEX idx_donaciones_status ON donaciones(status);
-      CREATE INDEX idx_donaciones_payment_method ON donaciones(payment_method);
-      CREATE INDEX idx_donaciones_created_at ON donaciones(created_at DESC);
-      CREATE INDEX idx_donaciones_email ON donaciones(donor_email);
+      CREATE INDEX idx_donacion_status ON donacion(status);
+      CREATE INDEX idx_donacion_payment_method ON donacion(payment_method);
+      CREATE INDEX idx_donacion_created_at ON donacion(created_at DESC);
+      CREATE INDEX idx_donacion_email ON donacion(donor_email);
       
-      CREATE UNIQUE INDEX idx_donaciones_culqi_charge_id ON donaciones(culqi_charge_id) WHERE culqi_charge_id IS NOT NULL;
-      CREATE UNIQUE INDEX idx_donaciones_yape_transaction_id ON donaciones(yape_transaction_id) WHERE yape_transaction_id IS NOT NULL;
+      CREATE UNIQUE INDEX idx_donacion_culqi_charge_id ON donacion(culqi_charge_id) WHERE culqi_charge_id IS NOT NULL;
+      CREATE UNIQUE INDEX idx_donacion_yape_transaction_id ON donacion(yape_transaction_id) WHERE yape_transaction_id IS NOT NULL;
     `
 
     const { error } = await supabaseAdmin.rpc('exec', { sql: recreateSQL })
@@ -134,15 +134,15 @@ export async function POST() {
     if (error) {
       console.error('Error recreando tabla:', error)
       return NextResponse.json({ 
-        error: 'Error recreando tabla: ' + error.message 
+        error: 'Error recreando tabla donacion: ' + error.message 
       }, { status: 500 })
     }
 
-    console.log('✅ Tabla donaciones recreada correctamente!')
+    console.log('✅ Tabla donacion recreada correctamente!')
     
     return NextResponse.json({ 
       recreated: true,
-      message: 'Tabla donaciones recreada exitosamente'
+      message: 'Tabla donacion recreada exitosamente'
     })
 
   } catch (error) {
