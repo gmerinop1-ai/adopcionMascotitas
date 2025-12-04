@@ -45,17 +45,10 @@ export const DONATION_PLANS: DonationPlan[] = [
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
   {
-    id: 'culqi',
-    name: 'Tarjeta de Crédito/Débito',
+    id: 'mercadopago',
+    name: 'Tarjeta de Crédito/Débito/Yape',
     type: 'card',
     icon: '💳',
-    available: true
-  },
-  {
-    id: 'yape',
-    name: 'Yape',
-    type: 'yape',
-    icon: '📱',
     available: true
   },
   {
@@ -66,3 +59,53 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     available: false // Para implementar más adelante
   }
 ]
+
+// Configuración de MercadoPago
+export const MERCADOPAGO_CONFIG = {
+  // Configuración de métodos de pago
+  PAYMENT_METHODS: {
+    excluded_payment_types: [], // Permitir todos los tipos
+    excluded_payment_methods: [], // Permitir todos los métodos
+    installments: 12, // Hasta 12 cuotas
+    default_installments: 1
+  },
+
+  // Configuración básica de checkout
+  CHECKOUT_SETTINGS: {
+    currency: 'PEN',
+    statement_descriptor: 'ADOPCION MASCOTAS',
+    auto_return: 'approved'
+  },
+
+  // Datos de prueba oficiales de MercadoPago
+  TEST_CARDS: [
+    {
+      number: '4509 9535 6623 3704',
+      cvv: '123',
+      month: '11',
+      year: '2025',
+      email: 'test_user_123@testuser.com',
+      description: 'Visa - Pago aprobado'
+    },
+    {
+      number: '5031 7557 3453 0604',
+      cvv: '123', 
+      month: '11',
+      year: '2025',
+      email: 'test_user_123@testuser.com',
+      description: 'MasterCard - Pago aprobado'
+    },
+    {
+      number: '4013 5406 8274 6260',
+      cvv: '123',
+      month: '11', 
+      year: '2025',
+      email: 'test_user_123@testuser.com',
+      description: 'Visa - Pago rechazado'
+    }
+  ],
+
+  // Validaciones
+  MIN_AMOUNT: 1.00, // Monto mínimo en soles
+  MAX_AMOUNT: 10000.00 // Monto máximo en soles
+}
