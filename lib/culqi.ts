@@ -1,4 +1,4 @@
-const Culqi = require('culqi-node')
+import * as CulqiModule from 'culqi-node'
 
 // Función para inicializar Culqi de manera lazy
 let culqiInstance: any = null
@@ -25,6 +25,8 @@ const initializeCulqi = () => {
 
   try {
     // Verificar si Culqi constructor está disponible
+    const Culqi = (CulqiModule as any).default || CulqiModule
+    
     if (!Culqi) {
       throw new Error('Módulo Culqi no está disponible')
     }
