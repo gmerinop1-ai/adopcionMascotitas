@@ -9,6 +9,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  swcMinify: true,
+  compiler: {
+    styledComponents: false,
+  },
+  transpilePackages: ['culqi-node'],
   env: {
     // Variables de entorno para MercadoPago
     NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY,
