@@ -18,7 +18,7 @@ async function createDonacionesTable() {
         donor_email TEXT,
         amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
         frequency TEXT NOT NULL CHECK (frequency IN ('one-time', 'monthly')),
-        payment_method TEXT NOT NULL CHECK (payment_method IN ('culqi', 'yape', 'bank_transfer')),
+        payment_method TEXT NOT NULL CHECK (payment_method IN ('culqi', 'yape', 'bank_transfer', 'mercadopago')),
         status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
         
         -- Datos específicos de Culqi
@@ -28,6 +28,10 @@ async function createDonacionesTable() {
         -- Datos específicos de Yape
         yape_transaction_id TEXT,
         yape_code TEXT,
+        
+        -- Datos específicos de MercadoPago
+        mercadopago_payment_id TEXT,
+        mercadopago_preference_id TEXT,
         
         -- Datos de transacción genéricos (JSON)
         transaction_data JSONB,
