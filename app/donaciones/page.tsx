@@ -9,15 +9,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Heart, CreditCard } from 'lucide-react'
-import { DONATION_PLANS, MERCADOPAGO_CONFIG } from '@/lib/donation-config'
+import { DONATION_PLANS } from '@/lib/donation-config'
 import { DonationPlan } from '@/lib/db'
 import { useAuth } from '@/contexts/auth-context'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 
-// Declarar MercadoPago global para TypeScript
+// Declarar Culqi global para TypeScript
 declare global {
   interface Window {
-    MercadoPago: any
+    Culqi: any
+    culqi: () => void
   }
 }
 
@@ -32,8 +33,14 @@ function DonationsPageContent() {
     message: ''
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [mercadopagoPublicKey, setMercadopagoPublicKey] = useState<string>('')
   const [currentDonationId, setCurrentDonationId] = useState<string>('')
+  const [culqiLoaded, setCulqiLoaded] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Evitar errores de hidratación
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Actualizar datos del donante cuando el usuario esté disponible
   useEffect(() => {
@@ -46,58 +53,76 @@ function DonationsPageContent() {
     }
   }, [user])
 
-  // Cargar script de MercadoPago
+  // Cargar script de Culqi solo en el cliente
   useEffect(() => {
-    const loadMercadoPagoScript = () => {
-      if (typeof window !== 'undefined') {
-        // Verificar si ya existe
-        if (window.MercadoPago) {
-          console.log('[MERCADOPAGO] Script ya cargado')
-          return Promise.resolve()
-        }
-        
-        // Verificar si ya hay un script cargándose
-        const existingScript = document.querySelector('script[src*="mercadopago.com"]')
-        if (existingScript) {
-          console.log('[MERCADOPAGO] Script ya está siendo cargado')
-          return new Promise((resolve) => {
-            existingScript.addEventListener('load', () => resolve(true))
-          })
-        }
-        
-        console.log('[MERCADOPAGO] Cargando script...')
-        
-        return new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://sdk.mercadopago.com/js/v2'
-          script.async = true
-          
-          script.onload = () => {
-            console.log('[MERCADOPAGO] Script cargado exitosamente')
-            // Verificar que MercadoPago esté disponible
-            if (window.MercadoPago) {
-              console.log('[MERCADOPAGO] MercadoPago disponible globalmente')
-              resolve(true)
-            } else {
-              console.error('[MERCADOPAGO] MercadoPago no disponible después de cargar script')
-              reject(new Error('MercadoPago no disponible después de cargar script'))
-            }
-          }
-          
-          script.onerror = (error) => {
-            console.error('[MERCADOPAGO] Error cargando script:', error)
-            reject(error)
-          }
-          
-          document.head.appendChild(script)
-        })
+    if (!mounted) return
+    
+    const loadCulqiScript = () => {
+      console.log('[CULQI] Iniciando carga de script...')
+      
+      // Verificar si ya existe
+      if (window.Culqi && typeof window.Culqi.open === 'function') {
+        console.log('[CULQI] Culqi ya cargado y funcional')
+        setCulqiLoaded(true)
+        return
       }
+      
+      // Verificar si ya hay un script cargándose
+      const existingScript = document.querySelector('script[src*="js.culqi.com"]')
+      if (existingScript) {
+        console.log('[CULQI] Script ya está siendo cargado')
+        return
+      }
+      
+      console.log('[CULQI] Cargando script...')
+      const script = document.createElement('script')
+      
+      // Usar la URL estándar de Culqi
+      script.src = 'https://js.culqi.com/v2'
+      script.async = true
+      script.type = 'text/javascript'
+      
+      script.onload = () => {
+        console.log('[CULQI] ✅ Script cargado exitosamente')
+        console.log('[CULQI] window.Culqi después de carga:', typeof window.Culqi)
+        
+        // Dar tiempo para que Culqi se inicialice completamente
+        setTimeout(() => {
+          if (window.Culqi && typeof window.Culqi.open === 'function') {
+            setCulqiLoaded(true)
+            console.log('[CULQI] ✅ Culqi completamente inicializado')
+          } else {
+            console.error('[CULQI] ❌ Culqi no se inicializó correctamente')
+            console.error('[CULQI] Estado actual:', {
+              windowCulqi: typeof window.Culqi,
+              culqiProps: window.Culqi ? Object.keys(window.Culqi) : 'N/A'
+            })
+          }
+        }, 2000)
+      }
+      
+      script.onerror = (error) => {
+        console.error('[CULQI] ❌ Error cargando script:', error)
+        console.error('[CULQI] Reintentando con script alternativo...')
+        
+        // Script alternativo
+        const fallbackScript = document.createElement('script')
+        fallbackScript.src = 'https://checkout.culqi.com/js/v3'
+        fallbackScript.async = true
+        fallbackScript.onload = () => {
+          console.log('[CULQI] ✅ Script alternativo cargado')
+          if (window.Culqi) {
+            setCulqiLoaded(true)
+          }
+        }
+        document.head.appendChild(fallbackScript)
+      }
+      
+      document.head.appendChild(script)
     }
     
-    loadMercadoPagoScript().catch((error) => {
-      console.error('[MERCADOPAGO] Error al cargar script:', error)
-    })
-  }, [])
+    loadCulqiScript()
+  }, [mounted])
 
   const handlePlanSelect = (plan: DonationPlan) => {
     setSelectedPlan(plan)
@@ -115,6 +140,81 @@ function DonationsPageContent() {
     return parseFloat(customAmount) || 0
   }
 
+  // Configurar callback de Culqi
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.culqi = async () => {
+        console.log('[CULQI] Callback ejecutado')
+        
+        // Verificar que Culqi esté disponible
+        if (!window.Culqi) {
+          console.error('[CULQI] ❌ Culqi no disponible en callback')
+          alert('Error en el sistema de pagos. Recarga la página.')
+          setIsLoading(false)
+          return
+        }
+        
+        if (window.Culqi.token && window.Culqi.token.id) {
+          const token = window.Culqi.token.id
+          console.log('[CULQI] Token generado:', token)
+          
+          if (!currentDonationId) {
+            console.error('[CULQI] ❌ donation_id faltante')
+            alert('Error: ID de donación no encontrado. Por favor, intenta de nuevo.')
+            setIsLoading(false)
+            return
+          }
+          
+          try {
+            setIsLoading(true)
+            
+            const amount = getFinalAmount()
+            
+            const paymentData = {
+              token,
+              donation_id: currentDonationId,
+              amount,
+              description: `Donación para mascotas - ${donor.name || 'Anónimo'}`,
+              customer_email: donor.email || ''
+            }
+            
+            console.log('[CULQI] Enviando datos para verificación:', paymentData)
+            
+            const response = await fetch('/api/payments/culqi/verify-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(paymentData)
+            })
+            
+            const result = await response.json()
+            console.log('[CULQI] Respuesta del servidor:', result)
+            
+            if (result.success) {
+              console.log('[CULQI] ✅ Pago exitoso!')
+              window.location.href = `/donaciones/exito?donation_id=${currentDonationId}`
+            } else {
+              console.error('[CULQI] ❌ Error en verificación:', result.error)
+              alert(result.error || 'Error al procesar el pago')
+            }
+          } catch (error) {
+            console.error('[CULQI] ❌ Error en callback:', error)
+            alert('Error procesando el pago. Inténtalo de nuevo.')
+          } finally {
+            setIsLoading(false)
+          }
+        } else if (window.Culqi.error) {
+          console.error('[CULQI] Error de Culqi:', window.Culqi.error)
+          alert(window.Culqi.error.user_message || 'Error en el pago')
+          setIsLoading(false)
+        } else {
+          console.error('[CULQI] Sin token ni error')
+          alert('Error desconocido en el pago')
+          setIsLoading(false)
+        }
+      }
+    }
+  }, [currentDonationId, donor, getFinalAmount])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -122,15 +222,12 @@ function DonationsPageContent() {
     try {
       const amount = getFinalAmount()
       
-      if (amount < MERCADOPAGO_CONFIG.MIN_AMOUNT) {
-        alert(`Por favor ingresa un monto válido (mínimo S/ ${MERCADOPAGO_CONFIG.MIN_AMOUNT})`)
+      if (amount < 1) {
+        alert('Por favor ingresa un monto válido (mínimo S/ 1.00)')
         return
       }
-      
-      if (amount > MERCADOPAGO_CONFIG.MAX_AMOUNT) {
-        alert(`El monto máximo permitido es S/ ${MERCADOPAGO_CONFIG.MAX_AMOUNT}`)
-        return
-      }
+
+      console.log('[FRONTEND] Iniciando proceso de donación...')
 
       const donationData = {
         amount,
@@ -140,54 +237,95 @@ function DonationsPageContent() {
         message: donor.message
       }
 
-      // Procesar con MercadoPago
-      console.log('[FRONTEND] Enviando datos a MercadoPago API:', donationData)
+      console.log('[FRONTEND] Enviando datos a Culqi API:', donationData)
         
-      const response = await fetch('/api/payments/mercadopago/create-preference', {
+      const response = await fetch('/api/payments/culqi/create-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(donationData)
       })
 
       const result = await response.json()
-      
-      console.log('[FRONTEND] Respuesta de MercadoPago API:', result)
+      console.log('[FRONTEND] Respuesta de Culqi API:', result)
       
       if (result.error) {
-        console.error('[FRONTEND] Error de MercadoPago API:', result.error)
-        alert(`Error: ${result.error}${result.details ? ` (${result.details})` : ''}`)
+        console.error('[FRONTEND] Error de Culqi API:', result.error)
+        alert(`Error: ${result.error}`)
         return
       }
 
-      console.log('[MERCADOPAGO] Datos recibidos:', result)
+      console.log('[CULQI] Datos recibidos:', result)
       
-      // Validar datos recibidos
       if (!result.publicKey) {
-        console.error('[FRONTEND] No se recibió la clave pública. Respuesta completa:', result)
-        alert('Error: No se recibió la clave pública de MercadoPago. Revisa la configuración.')
+        console.error('[FRONTEND] No se recibió la clave pública')
+        alert('Error de configuración. Contacta al soporte.')
         return
       }
       
-      if (!result.initPoint) {
+      if (!result.culqiData || !result.culqiData.amount) {
         alert('Error: Datos de pago inválidos')
         return
       }
       
       // Guardar datos de la sesión
-      setMercadopagoPublicKey(result.publicKey)
       setCurrentDonationId(result.donationId)
       
-      console.log('[MERCADOPAGO] Redirigiendo a checkout:', result.initPoint)
-      
-      // Redireccionar a MercadoPago Checkout Pro
-      window.location.href = result.initPoint
+      // Verificar que Culqi esté cargado
+      if (!culqiLoaded || !window.Culqi) {
+        console.error('[CULQI] ❌ Culqi no está disponible. Estado:', {
+          culqiLoaded,
+          windowCulqi: typeof window.Culqi,
+          hasOpenMethod: window.Culqi && typeof window.Culqi.open === 'function'
+        })
+        alert('El sistema de pagos aún no está listo. Por favor, recarga la página y espera unos segundos antes de intentar de nuevo.')
+        return
+      }
+
+      console.log('[CULQI] ✅ Culqi verificado - procediendo con el pago')
+
+      // Configuración SIMPLE para tarjetas
+      try {
+        console.log('[CULQI] Configurando Culqi...')
         
+        window.Culqi.publicKey = result.publicKey
+        window.Culqi.settings({
+          title: 'Donación - Adopción Mascotas',
+          currency: 'PEN',
+          amount: result.culqiData.amount,
+          order: result.donationId,
+          description: result.culqiData.description || 'Donación para mascotas'
+        })
+        
+        console.log('[CULQI] ✅ Configuración aplicada')
+        console.log('[CULQI] Abriendo modal...')
+        
+        window.Culqi.open()
+        console.log('[CULQI] ✅ Modal abierto exitosamente')
+        
+      } catch (culqiError) {
+        console.error('[CULQI] ❌ Error configurando Culqi:', culqiError)
+        alert('Error al abrir el sistema de pagos. Intenta nuevamente.')
+        return
+      }
+
     } catch (error) {
-      console.error('Error processing payment:', error)
-      alert('Error al procesar el pago. Inténtalo de nuevo.')
+      console.error('[FRONTEND] Error en handleSubmit:', error)
+      alert('Error al procesar la donación. Por favor, inténtalo de nuevo.')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Evitar errores de hidratación - no renderizar hasta que esté montado
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Cargando página de donaciones...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -247,39 +385,44 @@ function DonationsPageContent() {
             ))}
           </div>
 
-          {/* Cantidad Personalizada */}
-          <Card className={customAmount ? 'ring-2 ring-primary' : ''}>
+          {/* Monto Personalizado */}
+          <Card className={`${!selectedPlan && customAmount ? 'ring-2 ring-primary' : ''}`}>
             <CardHeader>
-              <CardTitle>Cantidad Personalizada</CardTitle>
-              <CardDescription>Elige el monto que desees donar</CardDescription>
+              <CardTitle className="text-lg">Monto Personalizado</CardTitle>
+              <CardDescription>Elige la cantidad que desees donar</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="custom-amount">Monto en Soles (S/)</Label>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <span className="text-lg font-medium">S/</span>
                 <Input
-                  id="custom-amount"
                   type="number"
                   min="1"
                   step="0.01"
-                  placeholder="Ej: 25.00"
+                  placeholder="0.00"
                   value={customAmount}
                   onChange={(e) => handleCustomAmountChange(e.target.value)}
+                  className="text-lg"
                 />
               </div>
-              
-              <div>
-                <Label>Frecuencia</Label>
-                <RadioGroup value={frequency} onValueChange={setFrequency as any}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="one-time" id="one-time" />
-                    <Label htmlFor="one-time">Una vez</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="monthly" id="monthly" />
-                    <Label htmlFor="monthly">Mensual</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+            </CardContent>
+          </Card>
+
+          {/* Frecuencia */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Frecuencia de Donación</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={frequency} onValueChange={setFrequency as any}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="one-time" id="one-time" />
+                  <Label htmlFor="one-time">Una vez</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="monthly" id="monthly" />
+                  <Label htmlFor="monthly">Mensual</Label>
+                </div>
+              </RadioGroup>
             </CardContent>
           </Card>
         </div>
@@ -343,9 +486,10 @@ function DonationsPageContent() {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={isLoading || getFinalAmount() < MERCADOPAGO_CONFIG.MIN_AMOUNT || getFinalAmount() > MERCADOPAGO_CONFIG.MAX_AMOUNT}
+                  disabled={isLoading || getFinalAmount() < 1 || !culqiLoaded}
                 >
-                  {isLoading ? 'Procesando...' : (
+                  {!culqiLoaded ? 'Cargando sistema de pagos...' : 
+                   isLoading ? 'Procesando...' : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
                       Donar S/ {getFinalAmount().toFixed(2)}
@@ -356,40 +500,27 @@ function DonationsPageContent() {
             </CardContent>
           </Card>
 
+          {/* Información Adicional */}
           <Card>
             <CardContent className="pt-6">
               <div className="text-sm text-muted-foreground space-y-2">
-                <p><strong>💳 Pagos Seguros:</strong> Todas las transacciones están protegidas por MercadoPago, la plataforma de pagos líder en Latinoamérica.</p>
-                <p><strong>📱 Múltiples Métodos:</strong> Acepta tarjetas de crédito/débito, Yape, billeteras digitales y cuotas sin interés.</p>
+                <p><strong>💳 Pagos Seguros:</strong> Todas las transacciones están protegidas por Culqi.</p>
+                <p><strong>📱 Métodos de pago:</strong> Tarjetas Visa/Mastercard disponibles.</p>
                 <p><strong>📧 Comprobante:</strong> Recibirás un email con los detalles de tu donación.</p>
                 <p><strong>❤️ Transparencia:</strong> Te mantendremos informado del impacto de tu donación.</p>
+                <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <p className="text-sm"><strong>🎉 ¡Pagos con tarjeta disponibles!</strong></p>
+                  <p className="text-xs mt-1">Puedes donar con tarjeta de crédito/débito de forma segura.</p>
+                  {!culqiLoaded && (
+                    <p className="text-xs mt-2 text-orange-600">⏳ Cargando sistema de pagos...</p>
+                  )}
+                  {culqiLoaded && (
+                    <p className="text-xs mt-2 text-green-600">✅ Sistema de pagos listo</p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Información de modo de prueba si aplica */}
-          {mercadopagoPublicKey && mercadopagoPublicKey.includes('TEST') && (
-            <Card className="bg-yellow-50 border-yellow-200">
-              <CardContent className="pt-6">
-                <div className="text-sm">
-                  <p className="font-semibold text-yellow-800 mb-2">🧪 Modo de Prueba Activo</p>
-                  <p className="text-yellow-700 mb-2">
-                    Esta es una demostración. Usa estos datos de prueba:
-                  </p>
-                  <div className="bg-white p-3 rounded border text-xs space-y-1">
-                    {MERCADOPAGO_CONFIG.TEST_CARDS.map((card, index) => (
-                      <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0">
-                        <p><strong>Tarjeta:</strong> {card.number}</p>
-                        <p><strong>CVV:</strong> {card.cvv} | <strong>Fecha:</strong> {card.month}/{card.year}</p>
-                        <p><strong>Email:</strong> {card.email}</p>
-                        <p className="text-gray-600 italic">{card.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
