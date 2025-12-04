@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { culqi } from '@/lib/culqi'
 import { insertDonation } from '@/lib/db'
 
+// Force redeploy - fixed SWC compilation error
+
 export async function POST(request: NextRequest) {
   try {
     console.log('[CULQI API] === INICIO create-session ===')
