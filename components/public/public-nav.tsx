@@ -24,21 +24,25 @@ export function PublicNav() {
             </Link>
 
             <div className="hidden md:flex items-center gap-2">
-              <Button asChild variant={pathname === "/mascotas" ? "default" : "ghost"} size="sm">
-                <Link href="/mascotas">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Adoptar
-                </Link>
-              </Button>
-              <Button asChild variant={pathname === "/donaciones" ? "default" : "ghost"} size="sm">
-                <Link href="/donaciones">
-                  <HandHeart className="mr-2 h-4 w-4" />
-                  Donar
-                </Link>
-              </Button>
-              <Button asChild variant={pathname === "/mis-procesos" ? "default" : "ghost"} size="sm">
-                <Link href="/mis-procesos">Mi Cuenta</Link>
-              </Button>
+              {shouldShowUserContent && user && (
+                <>
+                  <Button asChild variant={pathname === "/mascotas" ? "default" : "ghost"} size="sm">
+                    <Link href="/mascotas">
+                      <Heart className="mr-2 h-4 w-4" />
+                      Adoptar
+                    </Link>
+                  </Button>
+                  <Button asChild variant={pathname === "/donaciones" ? "default" : "ghost"} size="sm">
+                    <Link href="/donaciones">
+                      <HandHeart className="mr-2 h-4 w-4" />
+                      Donar
+                    </Link>
+                  </Button>
+                  <Button asChild variant={pathname === "/mis-procesos" ? "default" : "ghost"} size="sm">
+                    <Link href="/mis-procesos">Mi Cuenta</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 

@@ -1,10 +1,15 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Heart, PawPrint, Users, Shield, HandHeart } from "lucide-react"
 import { PublicNav } from "@/components/public/public-nav"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function HomePage() {
+  const { user, isHydrated } = useAuth()
+
   return (
     <div className="min-h-screen">
       <PublicNav />
@@ -27,21 +32,45 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button asChild size="lg" className="text-base">
-              <Link href="/mascotas">
-                <Heart className="mr-2 h-5 w-5" />
-                Ver Mascotas Disponibles
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="text-base bg-transparent">
-              <Link href="/donaciones">
-                <HandHeart className="mr-2 h-5 w-5" />
-                Hacer una Donación
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="secondary" className="text-base">
-              <Link href="/login">Iniciar Sesión</Link>
-            </Button>
+            {isHydrated && user ? (
+              // Usuario autenticado - mostrar enlaces directos
+              <>
+                <Button asChild size="lg" className="text-base">
+                  <Link href="/mascotas">
+                    <Heart className="mr-2 h-5 w-5" />
+                    Ver Mascotas Disponibles
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="text-base bg-transparent">
+                  <Link href="/donaciones">
+                    <HandHeart className="mr-2 h-5 w-5" />
+                    Hacer una Donación
+                  </Link>
+                </Button>
+              </>
+            ) : isHydrated ? (
+              // Usuario no autenticado - mostrar botones de auth
+              <>
+                <Button asChild size="lg" className="text-base">
+                  <Link href="/registro">
+                    <Heart className="mr-2 h-5 w-5" />
+                    Registrarse para Adoptar
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="text-base bg-transparent">
+                  <Link href="/login">
+                    <HandHeart className="mr-2 h-5 w-5" />
+                    Iniciar Sesión
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              // Loading state
+              <>
+                <div className="h-10 w-48 bg-muted animate-pulse rounded-md"></div>
+                <div className="h-10 w-40 bg-muted animate-pulse rounded-md"></div>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -107,17 +136,43 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center mb-8">
-            <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
-              <Link href="/donaciones">
-                <HandHeart className="mr-2 h-5 w-5" />
-                Donar Ahora
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/mascotas">
-                Ver Mascotas Disponibles
-              </Link>
-            </Button>
+            {isHydrated && user ? (
+              // Usuario autenticado - mostrar enlaces directos
+              <>
+                <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
+                  <Link href="/donaciones">
+                    <HandHeart className="mr-2 h-5 w-5" />
+                    Donar Ahora
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/mascotas">
+                    Ver Mascotas Disponibles
+                  </Link>
+                </Button>
+              </>
+            ) : isHydrated ? (
+              // Usuario no autenticado - redirigir al login
+              <>
+                <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
+                  <Link href="/login">
+                    <HandHeart className="mr-2 h-5 w-5" />
+                    Iniciar Sesión para Donar
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link href="/registro">
+                    Registrarse para Adoptar
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              // Loading state
+              <>
+                <div className="h-10 w-48 bg-muted animate-pulse rounded-md"></div>
+                <div className="h-10 w-52 bg-muted animate-pulse rounded-md"></div>
+              </>
+            )}
           </div>
 
           <div className="grid gap-6 sm:grid-cols-3 mt-12">
