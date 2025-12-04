@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Heart, CreditCard } from 'lucide-react'
 import { DONATION_PLANS } from '@/lib/donation-config'
 import { DonationPlan } from '@/lib/db'
+import { useAuth } from '@/contexts/auth-context'
+import { ProtectedRoute } from '@/components/auth/protected-route'
 
 // Declarar Culqi global para TypeScript
 declare global {
@@ -20,18 +22,30 @@ declare global {
   }
 }
 
-export default function DonationsPage() {
+function DonationsPageContent() {
+  const { user } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<DonationPlan | null>(null)
   const [customAmount, setCustomAmount] = useState('')
   const [frequency, setFrequency] = useState<'one-time' | 'monthly'>('monthly')
   const [donor, setDonor] = useState({
-    name: '',
-    email: '',
+    name: user?.nombres || '',
+    email: user?.correo || '',
     message: ''
   })
   const [isLoading, setIsLoading] = useState(false)
   const [culqiPublicKey, setCulqiPublicKey] = useState<string>('')
   const [currentDonationId, setCurrentDonationId] = useState<string>('')
+
+  // Actualizar datos del donante cuando el usuario esté disponible
+  useEffect(() => {
+    if (user) {
+      setDonor(prev => ({
+        ...prev,
+        name: prev.name || user.nombres || '',
+        email: prev.email || user.correo || ''
+      }))
+    }
+  }, [user])
 
   // Cargar script de Culqi
   useEffect(() => {
@@ -469,5 +483,13 @@ export default function DonationsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DonationsPage() {
+  return (
+    <ProtectedRoute>
+      <DonationsPageContent />
+    </ProtectedRoute>
   )
 }

@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Heart, Share2, ArrowLeft, Download, FileText } from 'lucide-react'
 import Link from 'next/link'
+import { ProtectedRoute } from '@/components/auth/protected-route'
 
-export default function DonationSuccessPage() {
+function DonationSuccessContent() {
   const searchParams = useSearchParams()
   const [donationDetails, setDonationDetails] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -178,5 +179,13 @@ export default function DonationSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function DonationSuccessPage() {
+  return (
+    <ProtectedRoute>
+      <DonationSuccessContent />
+    </ProtectedRoute>
   )
 }
