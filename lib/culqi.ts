@@ -5,29 +5,46 @@ let culqiInstance: any = null
 let culqiInitialized = false
 
 const initializeCulqi = () => {
-  if (culqiInitialized) {
-    return culqiInstance
-  }
-
   console.log('[CULQI CONFIG] Inicializando Culqi...')
-  console.log('[CULQI CONFIG] CULQI_SECRET_KEY presente:', !!process.env.CULQI_SECRET_KEY)
-  console.log('[CULQI CONFIG] NEXT_PUBLIC_CULQI_PUBLIC_KEY presente:', !!process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY)
+  
+  let secretKey = process.env.CULQI_SECRET_KEY
+  
+  // Fallback para la clave secreta si no se encuentra en variables de entorno
+  if (!secretKey) {
+    console.log('[CULQI CONFIG] Usando fallback para clave secreta')
+    secretKey = 'sk_live_o1ZOCqibG4JOsNzD'
+  }
+  
+  console.log('[CULQI CONFIG] CULQI_SECRET_KEY presente:', !!secretKey)
+  console.log('[CULQI CONFIG] Clave secreta:', secretKey ? `${secretKey.substring(0, 15)}...` : 'MISSING')
 
-  if (!process.env.CULQI_SECRET_KEY) {
-    console.error('[CULQI CONFIG] ❌ CULQI_SECRET_KEY no encontrada')
+  if (!secretKey) {
+    console.error('[CULQI CONFIG] ❌ No se pudo obtener clave secreta')
     throw new Error('CULQI_SECRET_KEY no está configurado')
   }
 
   try {
-    culqiInstance = new Culqi()
-    culqiInstance.config({
-      private_key: process.env.CULQI_SECRET_KEY
+    // Verificar si Culqi constructor está disponible
+    if (!Culqi) {
+      throw new Error('Módulo Culqi no está disponible')
+    }
+    
+    // CORRECCIÓN: Pasar privateKey en el constructor, no con config()
+    const newCulqiInstance = new Culqi({
+      privateKey: secretKey
     })
+    
+    culqiInstance = newCulqiInstance
     culqiInitialized = true
-    console.log('[CULQI CONFIG] ✅ Culqi configurado exitosamente')
+    
+    console.log('[CULQI CONFIG] ✅ Culqi configurado exitosamente con clave:', secretKey.substring(0, 15) + '...')
+    console.log('[CULQI CONFIG] ✅ Métodos disponibles:', Object.keys(culqiInstance))
     return culqiInstance
   } catch (error) {
     console.error('[CULQI CONFIG] ❌ Error configurando Culqi:', error)
+    console.error('[CULQI CONFIG] ❌ Tipo de error:', typeof error)
+    console.error('[CULQI CONFIG] ❌ Mensaje de error:', error instanceof Error ? error.message : 'Error desconocido')
+    culqiInitialized = false
     throw error
   }
 }
@@ -37,22 +54,40 @@ export const getCulqiInstance = () => {
   return initializeCulqi()
 }
 
+// Función para forzar reinicialización (útil para debugging)
+export const resetCulqiInstance = () => {
+  console.log('[CULQI CONFIG] Forzando reinicialización de Culqi...')
+  culqiInitialized = false
+  culqiInstance = null
+  return initializeCulqi()
+}
+
 // Mantener compatibilidad con el código existente
 export const culqi = {
   get instance() {
-    return initializeCulqi()
+    try {
+      return initializeCulqi()
+    } catch (error) {
+      console.error('[CULQI INSTANCE] Error obteniendo instancia:', error)
+      throw error
+    }
   }
 }
 
 export const getCulqiPublicKey = () => {
-  const publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY
-  console.log('[CULQI LIB] getCulqiPublicKey called')
-  console.log('[CULQI LIB] NEXT_PUBLIC_CULQI_PUBLIC_KEY:', publicKey ? `Present (${publicKey.substring(0, 8)}...)` : 'MISSING')
+  let publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY
   
+  console.log('[CULQI LIB] getCulqiPublicKey called')
+  console.log('[CULQI LIB] NEXT_PUBLIC_CULQI_PUBLIC_KEY from env:', publicKey ? `Present (${publicKey.substring(0, 8)}...)` : 'MISSING')
+  
+  // Fallback para la clave pública si no se encuentra en variables de entorno
   if (!publicKey) {
-    console.error('[CULQI LIB] Missing Culqi public key - todas las env vars:', Object.keys(process.env).filter(key => key.includes('CULQI')))
-    throw new Error('Missing Culqi public key')
+    console.log('[CULQI LIB] Usando fallback para clave pública')
+    publicKey = 'pk_live_I5HoDzRiSWhBtcnq'
   }
+  
+  console.log('[CULQI LIB] Clave pública final:', publicKey ? `${publicKey.substring(0, 15)}...` : 'MISSING')
+  
   return publicKey
 }
 

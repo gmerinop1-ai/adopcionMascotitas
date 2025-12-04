@@ -21,17 +21,28 @@ export async function POST(request: NextRequest) {
     
     // Verificar variables de entorno con logs detallados
     console.log('[CULQI API] Verificando variables de entorno...')
-    console.log('[CULQI API] Todas las variables NEXT_PUBLIC_CULQI:', Object.keys(process.env).filter(key => key.includes('CULQI')))
+    console.log('[CULQI API] process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY:', process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY)
+    console.log('[CULQI API] process.env.CULQI_SECRET_KEY:', process.env.CULQI_SECRET_KEY ? 'PRESENT' : 'MISSING')
     
-    const publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY
-    const secretKey = process.env.CULQI_SECRET_KEY
+    let publicKey = process.env.NEXT_PUBLIC_CULQI_PUBLIC_KEY
+    let secretKey = process.env.CULQI_SECRET_KEY
     
-    console.log('[CULQI API] NEXT_PUBLIC_CULQI_PUBLIC_KEY:', publicKey ? `Presente (${publicKey.substring(0, 8)}...)` : 'FALTANTE')
-    console.log('[CULQI API] CULQI_SECRET_KEY:', secretKey ? `Presente (${secretKey.substring(0, 8)}...)` : 'FALTANTE')
+    // Fallbacks para las credenciales de producción
+    if (!publicKey) {
+      console.log('[CULQI API] Usando fallback para clave pública')
+      publicKey = 'pk_live_I5HoDzRiSWhBtcnq'
+    }
+    
+    if (!secretKey) {
+      console.log('[CULQI API] Usando fallback para clave secreta')
+      secretKey = 'sk_live_o1ZOCqibG4JOsNzD'
+    }
+    
+    console.log('[CULQI API] Clave pública final:', publicKey ? `${publicKey.substring(0, 15)}...` : 'FALTANTE')
+    console.log('[CULQI API] Clave secreta final:', secretKey ? `${secretKey.substring(0, 15)}...` : 'FALTANTE')
     
     if (!publicKey) {
-      console.error('[CULQI API] ❌ NEXT_PUBLIC_CULQI_PUBLIC_KEY no configurada')
-      console.error('[CULQI API] ❌ Todas las env vars:', Object.keys(process.env))
+      console.error('[CULQI API] ❌ No se pudo obtener clave pública')
       return NextResponse.json(
         { error: 'Configuración de Culqi incompleta - clave pública faltante' },
         { status: 500 }
@@ -39,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (!secretKey) {
-      console.error('[CULQI API] ❌ CULQI_SECRET_KEY no configurada')  
+      console.error('[CULQI API] ❌ No se pudo obtener clave secreta')  
       return NextResponse.json(
         { error: 'Configuración de Culqi incompleta - clave secreta faltante' },
         { status: 500 }
@@ -47,6 +58,28 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('[CULQI API] ✅ Variables de entorno OK')
+    
+    // Configurar Culqi con la clave secreta (actualizar instancia si es necesario)
+    try {
+      console.log('[CULQI API] Configurando cliente Culqi...')
+      console.log('[CULQI API] Verificando importación de culqi:', typeof culqi)
+      console.log('[CULQI API] culqi object:', culqi)
+      
+      // Forzar reinicialización con la clave secreta correcta
+      process.env.CULQI_SECRET_KEY = secretKey
+      
+      console.log('[CULQI API] Accediendo a culqi.instance...')
+      const culqiClient = culqi.instance
+      console.log('[CULQI API] ✅ Cliente Culqi obtenido:', typeof culqiClient)
+      console.log('[CULQI API] Métodos disponibles:', culqiClient ? Object.keys(culqiClient) : 'Cliente es null/undefined')
+    } catch (culqiError) {
+      console.error('[CULQI API] ❌ Error configurando Culqi:', culqiError)
+      console.error('[CULQI API] ❌ Stack trace:', culqiError instanceof Error ? culqiError.stack : 'No stack trace')
+      return NextResponse.json(
+        { error: 'Error configurando sistema de pagos' },
+        { status: 500 }
+      )
+    }
     
     // Crear donación en base de datos primero
     console.log('[CULQI API] Insertando donación en BD...')
@@ -82,15 +115,22 @@ export async function POST(request: NextRequest) {
     
     // Verificar nuevamente que tenemos la clave pública
     if (!publicKey) {
+      console.error('[CULQI API] ❌ No hay clave pública disponible')
       throw new Error('NEXT_PUBLIC_CULQI_PUBLIC_KEY no está configurado')
     }
 
-    return NextResponse.json({ 
+    console.log('[CULQI API] ✅ Retornando respuesta exitosa')
+    
+    const finalResponse = { 
       success: true,
       donationId: donation.id,
       culqiData,
       publicKey: publicKey
-    })
+    }
+    
+    console.log('[CULQI API] Respuesta final:', JSON.stringify(finalResponse, null, 2))
+    
+    return NextResponse.json(finalResponse)
     
   } catch (error) {
     console.error('[CULQI API] ❌ Error completo:', error)
