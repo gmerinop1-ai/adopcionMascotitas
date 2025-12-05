@@ -99,8 +99,17 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("[PASSWORD_RESET] Error:", error)
+    
+    // Get more specific error information
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+    const isDatabaseError = errorMessage.includes('relation "verification_codes" does not exist')
+    
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { 
+        error: "Error interno del servidor",
+        details: errorMessage,
+        fix: isDatabaseError ? "Ejecuta el script SQL: scripts/create-verification-codes-table.sql" : undefined
+      },
       { status: 500 }
     )
   }

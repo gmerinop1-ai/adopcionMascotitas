@@ -197,11 +197,22 @@ export default function HomePage() {
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="mb-4 text-3xl font-bold">¿Listo para adoptar?</h2>
           <p className="mb-8 text-lg text-muted-foreground">
-            Regístrate hoy y comienza el proceso de adopción. Es rápido, fácil y gratuito.
+            {isHydrated && user 
+              ? "Explora nuestras mascotas disponibles y encuentra tu compañero perfecto."
+              : "Regístrate hoy y comienza el proceso de adopción. Es rápido, fácil y gratuito."
+            }
           </p>
-          <Button asChild size="lg">
-            <Link href="/registro">Crear Cuenta Gratis</Link>
-          </Button>
+          {isHydrated && user ? (
+            <Button asChild size="lg">
+              <Link href="/mascotas">Ver Mascotas Disponibles</Link>
+            </Button>
+          ) : isHydrated ? (
+            <Button asChild size="lg">
+              <Link href="/registro">Crear Cuenta Gratis</Link>
+            </Button>
+          ) : (
+            <div className="h-10 w-40 bg-muted animate-pulse rounded-md mx-auto"></div>
+          )}
         </div>
       </section>
     </div>
