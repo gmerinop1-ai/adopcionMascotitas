@@ -150,6 +150,18 @@ export interface DonationPlan {
   popular?: boolean
 }
 
+export interface VerificationCode {
+  id: string
+  email: string
+  dni?: string
+  code: string
+  type: 'email_verification' | 'password_reset' | 'dni_verification'
+  expires_at: string
+  used: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface PaymentMethod {
   id: string
   name: string
@@ -1424,14 +1436,153 @@ export async function getDonationById(id: string) {
         console.log(`[DB] No se encontró donación con ID: ${id}`)
         return null
       }
-      console.error('[DB] Error getting donation by ID:', error)
+      console.error(`[DB] Error getting donation by ID ${id}:`, error)
       throw new Error(`Database error: ${error.message}`)
     }
     
-    console.log(`[DB] ✅ Donación encontrada:`, data)
+    console.log(`[DB] ✅ Donación encontrada: ${id}`)
     return data
   } catch (error) {
-    console.error('[DB] getDonationById failed:', error)
+    console.error('getDonationById failed:', error)
+    throw error
+  }
+}
+
+// Verification Code functions
+export async function insertVerificationCode(data: {
+  email: string
+  dni?: string
+  code: string
+  type: 'email_verification' | 'password_reset' | 'dni_verification'
+  expires_at: string
+}) {
+  try {
+    console.log(`[DB] Insertando código de verificación para: ${data.email}`)
+    
+    const { data: result, error } = await supabase
+      .from('verification_codes')
+      .insert([{
+        email: data.email,
+        dni: data.dni,
+        code: data.code,
+        type: data.type,
+        expires_at: data.expires_at,
+        used: false
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error inserting verification code:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Código de verificación creado: ${result.id}`)
+    return result
+  } catch (error) {
+    console.error('insertVerificationCode failed:', error)
+    throw error
+  }
+}
+
+export async function getValidVerificationCode(email: string, code: string, type: string) {
+  try {
+    console.log(`[DB] Validando código para: ${email}`)
+    
+    const { data, error } = await supabase
+      .from('verification_codes')
+      .select('*')
+      .eq('email', email)
+      .eq('code', code)
+      .eq('type', type)
+      .eq('used', false)
+      .gte('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error getting verification code:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    return data
+  } catch (error) {
+    console.error('getValidVerificationCode failed:', error)
+    throw error
+  }
+}
+
+export async function markVerificationCodeAsUsed(id: string) {
+  try {
+    console.log(`[DB] Marcando código como usado: ${id}`)
+    
+    const { error } = await supabase
+      .from('verification_codes')
+      .update({ 
+        used: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error marking verification code as used:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Código marcado como usado: ${id}`)
+  } catch (error) {
+    console.error('markVerificationCodeAsUsed failed:', error)
+    throw error
+  }
+}
+
+export async function invalidateOldVerificationCodes(email: string, type: string) {
+  try {
+    console.log(`[DB] Invalidando códigos antiguos para: ${email}`)
+    
+    const { error } = await supabase
+      .from('verification_codes')
+      .update({ 
+        used: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email)
+      .eq('type', type)
+      .eq('used', false)
+
+    if (error) {
+      console.error('Error invalidating old verification codes:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Códigos antiguos invalidados para: ${email}`)
+  } catch (error) {
+    console.error('invalidateOldVerificationCodes failed:', error)
+    throw error
+  }
+}
+
+export async function updateUserPassword(userId: string, newPasswordHash: string) {
+  try {
+    console.log(`[DB] Actualizando contraseña para usuario: ${userId}`)
+    
+    const { error } = await supabase
+      .from('usuario')
+      .update({ 
+        password: newPasswordHash,
+        updated_at: new Date().toISOString()
+      })
+      .eq('usuario_id', userId)
+
+    if (error) {
+      console.error('Error updating user password:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    
+    console.log(`[DB] ✅ Contraseña actualizada para usuario: ${userId}`)
+  } catch (error) {
+    console.error('updateUserPassword failed:', error)
     throw error
   }
 }

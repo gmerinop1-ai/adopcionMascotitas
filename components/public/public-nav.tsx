@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { PawPrint, Heart, User, LogOut, Settings, HandHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,10 +9,15 @@ import { useAuth } from "@/contexts/auth-context"
 
 export function PublicNav() {
   const pathname = usePathname()
-  const { user, logout, isLoading, isHydrated } = useAuth()
+  const { user, logout, isLoading } = useAuth()
+  const [mounted, setMounted] = useState(false)
 
-  // Prevent hydration mismatch by not rendering user-dependent content until hydrated
-  const shouldShowUserContent = isHydrated && !isLoading
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Prevent hydration mismatch by not rendering user-dependent content until mounted
+  const shouldShowUserContent = mounted && !isLoading
 
   return (
     <nav className="border-b bg-card sticky top-0 z-50">
