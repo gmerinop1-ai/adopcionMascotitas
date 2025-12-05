@@ -15,29 +15,27 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] Obteniendo donaciones para usuario:', email)
     
-    const allDonations = await getDonationsByEmail(email)
+    const donations = await getDonationsByEmail(email)
     
-    // Filtrar solo donaciones completadas
-    const donations = allDonations.filter(d => d.status === 'completed')
+    // Calcular estadísticas solo para donaciones completadas
+    const completedDonations = donations.filter(d => d.status === 'completed')
+    const totalDonated = completedDonations.reduce((sum, d) => sum + d.amount, 0)
     
-    // Calcular estadísticas
-    const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0)
+    const totalTransactions = completedDonations.length
     
-    const totalTransactions = donations.length
+    const monthlyDonations = completedDonations.filter(d => d.frequency === 'monthly').length
     
-    const monthlyDonations = donations.filter(d => d.frequency === 'monthly').length
-    
-    const oneTimeDonations = donations.filter(d => d.frequency === 'one-time').length
+    const oneTimeDonations = completedDonations.filter(d => d.frequency === 'one-time').length
 
     return NextResponse.json({
       success: true,
-      donations,
+      donations, // Mostrar todas las donaciones (incluyendo pendientes)
       statistics: {
         totalDonated,
         totalTransactions,
         monthlyDonations,
         oneTimeDonations,
-        lastDonation: donations[0]?.created_at || null
+        lastDonation: completedDonations[0]?.created_at || null
       }
     })
   } catch (error) {

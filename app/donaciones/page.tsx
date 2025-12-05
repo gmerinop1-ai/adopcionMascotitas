@@ -36,6 +36,7 @@ function DonationsPageContent() {
   const [currentDonationId, setCurrentDonationId] = useState<string>('')
   const [culqiLoaded, setCulqiLoaded] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [maintenanceMode, setMaintenanceMode] = useState(false)
 
   // Evitar errores de hidratación
   useEffect(() => {
@@ -170,31 +171,46 @@ function DonationsPageContent() {
             
             const amount = getFinalAmount()
             
-            const paymentData = {
-              token,
-              donation_id: currentDonationId,
-              amount,
-              description: `Donación para mascotas - ${donor.name || 'Anónimo'}`,
-              customer_email: donor.email || ''
+            // Simular servicio en mantenimiento para todos los pagos
+            console.log('[CULQI] Simulando servicio en mantenimiento...')
+            
+            // Crear donación como pendiente
+            const donationData = {
+              donor_name: donor.name || 'Anónimo',
+              donor_email: donor.email || '',
+              amount: amount,
+              frequency: frequency, // Usar la variable frequency del estado
+              payment_method: 'card',
+              status: 'pending',
+              message: donor.message || '',
+              // Datos del token para referencia
+              culqi_token_id: token,
+              transaction_data: {
+                maintenance_mode: true,
+                original_amount: amount,
+                timestamp: new Date().toISOString(),
+                payment_method: 'culqi_card'
+              }
             }
             
-            console.log('[CULQI] Enviando datos para verificación:', paymentData)
+            console.log('[DONACION] Guardando donación pendiente:', donationData)
             
-            const response = await fetch('/api/payments/culqi/verify-session', {
+            const response = await fetch('/api/donations/create-pending', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(paymentData)
+              body: JSON.stringify(donationData)
             })
             
             const result = await response.json()
-            console.log('[CULQI] Respuesta del servidor:', result)
+            console.log('[DONACION] Respuesta del servidor:', result)
             
             if (result.success) {
-              console.log('[CULQI] ✅ Pago exitoso!')
-              window.location.href = `/donaciones/exito?donation_id=${currentDonationId}`
+              // Mostrar modal de mantenimiento
+              setMaintenanceMode(true)
+              setCurrentDonationId(result.donation.id)
             } else {
-              console.error('[CULQI] ❌ Error en verificación:', result.error)
-              alert(result.error || 'Error al procesar el pago')
+              console.error('[DONACION] ❌ Error creando donación pendiente:', result.error)
+              alert('Error al procesar la donación. Inténtalo de nuevo.')
             }
           } catch (error) {
             console.error('[CULQI] ❌ Error en callback:', error)
@@ -314,6 +330,69 @@ function DonationsPageContent() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Modal de mantenimiento
+  const MaintenanceModal = () => {
+    if (!maintenanceMode) return null
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+              <Heart className="h-8 w-8 text-yellow-600" />
+            </div>
+            <CardTitle className="text-xl font-bold text-yellow-700">
+              Servicio en Mantenimiento
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              El sistema de pagos está temporalmente en mantenimiento
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-yellow-800 mb-2">Tu donación ha sido registrada</h4>
+              <p className="text-sm text-yellow-700">
+                Estado: <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">Pendiente</Badge>
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                Procesaremos tu pago una vez que el servicio esté disponible
+              </p>
+            </div>
+            
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>✓ Tu donación queda registrada en el sistema</p>
+              <p>✓ Puedes ver el estado en "Mis Aportes"</p>
+              <p>✓ Te notificaremos cuando se procese</p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => window.location.href = '/mis-procesos'}
+                className="flex-1"
+              >
+                Ver Mis Aportes
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setMaintenanceMode(false)
+                  setIsLoading(false)
+                  // Reset form
+                  setSelectedPlan(null)
+                  setCustomAmount('')
+                  setDonor(prev => ({ ...prev, message: '' }))
+                }}
+                className="flex-1"
+              >
+                Continuar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   // Evitar errores de hidratación - no renderizar hasta que esté montado
@@ -523,6 +602,9 @@ function DonationsPageContent() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Mantenimiento */}
+      <MaintenanceModal />
     </div>
   )
 }

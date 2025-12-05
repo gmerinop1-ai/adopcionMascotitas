@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CreditCard, Calendar, ArrowRight, Heart, TrendingUp, Download, FileText } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import type { Donacion } from "@/lib/db"
@@ -40,9 +41,8 @@ export function MisAportes() {
       const data = await response.json()
       
       if (data.success) {
-        // Filtrar solo donaciones completadas
-        const completedDonations = (data.donations || []).filter((d: Donacion) => d.status === 'completed')
-        setDonations(completedDonations)
+        // Mostrar todas las donaciones (pendientes y completadas)
+        setDonations(data.donations || [])
         setStatistics(data.statistics || null)
       }
     } catch (error) {
@@ -57,7 +57,7 @@ export function MisAportes() {
       case "completed":
         return <Badge className="bg-green-600">Completado</Badge>
       case "pending":
-        return <Badge variant="secondary">Pendiente</Badge>
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">Pendiente</Badge>
       case "failed":
         return <Badge variant="destructive">Fallido</Badge>
       case "refunded":
@@ -202,6 +202,26 @@ export function MisAportes() {
         </div>
       )}
 
+      {/* Alerta informativa sobre donaciones pendientes */}
+      {donations.some(d => d.status === 'pending') && (
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Heart className="h-3 w-3 text-yellow-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-yellow-800 mb-1">Donaciones en Proceso</h4>
+                <p className="text-sm text-yellow-700">
+                  Algunas de tus donaciones están pendientes debido a mantenimiento en el sistema de pagos. 
+                  Se procesarán automáticamente cuando el servicio esté disponible.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Historial de donaciones */}
       <Card>
         <CardHeader>
@@ -230,14 +250,52 @@ export function MisAportes() {
                 </div>
                 
                 <div className="flex flex-col gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadReceipt(donation.id)}
-                  >
-                    <FileText className="mr-2 h-3 w-3" />
-                    Ver Comprobante
-                  </Button>
+                  {donation.status === 'pending' ? (
+                    <div className="text-right">
+                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 mb-2">
+                        Servicio en Mantenimiento
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Se procesará cuando el servicio esté disponible
+                      </p>
+                    </div>
+                  ) : donation.status === 'completed' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadReceipt(donation.id)}
+                    >
+                      <FileText className="mr-2 h-3 w-3" />
+                      Ver Comprobante
+                    </Button>
+                  ) : donation.status === 'failed' ? (
+                    <div className="text-right">
+                      <Badge variant="destructive" className="mb-2">
+                        Pago Fallido
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        El pago no pudo ser procesado
+                      </p>
+                    </div>
+                  ) : donation.status === 'refunded' ? (
+                    <div className="text-right">
+                      <Badge variant="outline" className="mb-2">
+                        Reembolsado
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Transacción reembolsada
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-right">
+                      <Badge variant="outline" className="mb-2">
+                        {donation.status}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Estado desconocido
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
